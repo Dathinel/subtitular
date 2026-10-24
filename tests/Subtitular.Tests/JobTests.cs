@@ -30,8 +30,19 @@ public sealed class JobTests
     {
         string input = Path.Combine(Path.GetTempPath(), "clip.mp4");
         Assert.Equal(Path.Combine(Path.GetTempPath(), "clip.srt"), SubtitleJob.OutputPath(new JobOptions(input), ".srt"));
-        Assert.Equal(Path.Combine(Path.GetTempPath(), "clip.en.wav"), SubtitleJob.OutputPath(new JobOptions(input) { TranslateTo = "en" }, ".wav"));
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "clip.en.voz.wav"), SubtitleJob.OutputPath(new JobOptions(input) { TranslateTo = "en" }, ".voz.wav"));
         Assert.Equal(Path.Combine("C:\\salida", "clip.vtt"), SubtitleJob.OutputPath(new JobOptions(input) { OutputDir = "C:\\salida" }, ".vtt"));
+    }
+
+    [Fact]
+    public void Output_path_never_overwrites_the_input()
+    {
+        string wav = Path.Combine(Path.GetTempPath(), "voz.wav");
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "voz.voz.wav"), SubtitleJob.OutputPath(new JobOptions(wav), ".voz.wav"));
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "voz.subtitular.wav"), SubtitleJob.OutputPath(new JobOptions(wav), ".wav"));
+        string srt = Path.Combine(Path.GetTempPath(), "clip.srt");
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "clip.subtitular.srt"), SubtitleJob.OutputPath(new JobOptions(srt), ".srt"));
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "clip.en.srt"), SubtitleJob.OutputPath(new JobOptions(srt) { TranslateTo = "en" }, ".srt"));
     }
 
     [Fact]

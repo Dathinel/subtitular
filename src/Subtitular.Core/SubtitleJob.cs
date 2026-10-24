@@ -72,7 +72,11 @@ public static class SubtitleJob
         {
             name += "." + options.TranslateTo;
         }
-        return Path.Combine(dir, name + extension);
+        string path = Path.Combine(dir, name + extension);
+        // Un .wav de entrada con «Leer en voz alta» pisaba el audio original; la salida nunca puede ser la entrada.
+        return string.Equals(Path.GetFullPath(path), Path.GetFullPath(options.InputFile), StringComparison.OrdinalIgnoreCase)
+            ? Path.Combine(dir, name + ".subtitular" + extension)
+            : path;
     }
 
     /// <summary>La transcripción lista para revisar (ya traducida si se pidió).</summary>
@@ -128,7 +132,7 @@ public static class SubtitleJob
             IReadOnlyList<JobStage> stages = StagesOf(options);
             (float[] audio, int sampleRate) = await SpeechSynthesizer.SpeakAsync(transcript, options.VoiceModule, null,
                 new Progress<ModuleProgress>(p => progress?.Report(JobProgress.Of(stages, JobStage.Speak, p.Fraction))), cancellationToken).ConfigureAwait(false);
-            wav = OutputPath(options, ".wav");
+            wav = OutputPath(options, ".voz.wav");
             SpeechSynthesizer.WriteWav(wav, audio, sampleRate);
         }
         return (subtitles, wav);

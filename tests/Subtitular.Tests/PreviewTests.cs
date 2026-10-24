@@ -17,13 +17,14 @@ public sealed class PreviewTests
         Assert.Equal("Hola a todos.", SubtitlePreview.Text(cues[0]));
 
         Transcript edited = SubtitlePreview.ToTranscript(
-            [(cues[0].Start, cues[0].End, "Hola a todas."), (cues[1].Start, cues[1].End, "   ")], original);
+            [(cues[0].Start, cues[0].End, "Hola a todas."), (cues[1].Start, cues[1].End, SubtitlePreview.Text(cues[1]) + " (editado)")], original);
 
-        Assert.Single(edited.Segments);
+        Assert.Equal(2, edited.Segments.Count);
         Assert.Equal("es", edited.Language);
         string srt = SubtitleWriter.ToSrt(edited);
         Assert.Contains("Hola a todas.", srt, StringComparison.Ordinal);
-        Assert.DoesNotContain("Segundo", srt, StringComparison.Ordinal);
+        Assert.Contains("Segundo bloque. (editado)", srt, StringComparison.Ordinal);
+        Assert.Empty(SubtitlePreview.ToTranscript([(cues[0].Start, cues[0].End, "   ")], original).Segments);
         Assert.Contains("00:00:00,000 --> 00:00:02,000", srt, StringComparison.Ordinal);
     }
 }
