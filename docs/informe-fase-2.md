@@ -24,3 +24,10 @@ Hecha por Claude (Fable 5.1) en el worktree `fase-2-ui`; pendiente de verificaci
 - Segmentos de más de 500 caracteres o más de 5000 segmentos: el traductor los rechaza (límite del módulo); habría que partirlos.
 - La voz lee con la voz por defecto del idioma; no hay selector de voz ni de velocidad en la ventana.
 - Fase 3: zip en `dist\`, entrada `app` en el catálogo firmado y release.
+
+## Verificación (24-oct, otro agente Claude)
+
+- Release `-warnaserror`: 0 advertencias; `build\publicar.cmd` sin avisos de recorte ni de CsWinRT. Rápidas: 27/27 en dos pasadas limpias (una tercera, con la CPU al 100 % por otros agentes, falló los 4 contratos con Eco por tiempo de espera de 30 s: no es del código). Larga: pasa, 24,96 s (decodificar 1,1 s, transcribir 3,7 s, traducir 20,1 s con carga de Qwen; la voz sale sumada a traducir porque el progreso de voz solo llega al terminar cada frase).
+- Publicado: `Subtitular.exe` 7.793.664 bytes, `Subtitular.Cli.exe` 4.208.128; carpeta 123 MB. Arranque medido desde fuera (`MainWindowHandle` ≠ 0 cada 50 ms): 294 / 206 / 163 ms; hasta el primer cuadro (`--medir`): 318 / 275 / 397 ms. Vivo 3 s sin dejar archivos.
+- Arreglado en este commit: tras cancelar o fallar «Generar», «Guardar» quedaba activo con la transcripción anterior y la lista vacía (escribía un archivo vacío); y las excepciones de `async void` tras un `await` (soltar, Elegir…, Carpeta…) no pasan por `Application.UnhandledException` en WinUI 3 (Rodaje lo salva con `GuardedSynchronizationContext`): ahora salen en la barra.
+- Pendiente: `FileOpenPicker`/`FolderPicker` de WinRT fallan si la app corre como administrador; la barra lo explica y pide arrastrar el archivo. Pasar a `IFileOpenDialog` (como Rodaje) solo si Daniel lo necesita elevado. Si el usuario cambia «Traducir a…» o el formato entre Generar y Guardar, el nombre del archivo sigue a la selección nueva, no a la transcripción.

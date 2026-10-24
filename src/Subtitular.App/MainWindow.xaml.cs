@@ -74,16 +74,19 @@ public sealed partial class MainWindow : Window
     private void OnDragOver(object sender, DragEventArgs e) =>
         e.AcceptedOperation = e.DataView.Contains(StandardDataFormats.StorageItems) ? DataPackageOperation.Copy : DataPackageOperation.None;
 
-    private async void OnDrop(object sender, DragEventArgs e)
+    private async void OnDrop(object sender, DragEventArgs e) => await GuardedAsync(async () =>
     {
         IReadOnlyList<IStorageItem> items = await e.DataView.GetStorageItemsAsync();
         if (items.FirstOrDefault() is IStorageFile file)
         {
             await LoadFileAsync(file.Path);
         }
-    }
+    });
 
-    private async void OnChoose(object sender, RoutedEventArgs e)
+    // Los selectores de WinRT fallan (acceso denegado) si la app corre como administrador; Rodaje usa IFileOpenDialog.
+    private const string PickerHint = " Si Subtitular corre como administrador, el diálogo de Windows no se abre: arrastra el archivo a la ventana.";
+
+    private async void OnChoose(object sender, RoutedEventArgs e) => await GuardedAsync(async () =>
     {
         FileOpenPicker picker = new();
         WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
@@ -95,9 +98,9 @@ public sealed partial class MainWindow : Window
         {
             await LoadFileAsync(file.Path);
         }
-    }
+    }, PickerHint);
 
-    private async void OnChooseFolder(object sender, RoutedEventArgs e)
+    private async void OnChooseFolder(object sender, RoutedEventArgs e) => await GuardedAsync(async () =>
     {
         FolderPicker picker = new();
         WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
@@ -105,6 +108,19 @@ public sealed partial class MainWindow : Window
         if (await picker.PickSingleFolderAsync() is { } folder)
         {
             OutputDirBox.Text = folder.Path;
+        }
+    }, PickerHint);
+
+    /// <summary>Lo que escape de un async void tras un await no llega a Application.UnhandledException y cierra la app: aquí sale en la barra.</summary>
+    private async Task GuardedAsync(Func<Task> action, string hint = "")
+    {
+        try
+        {
+            await action();
+        }
+        catch (Exception ex)
+        {
+            ShowError((SubtitleJob.Describe(ex) ?? "Error inesperado: " + ex.Message) + hint);
         }
     }
 
@@ -132,9 +148,9 @@ public sealed partial class MainWindow : Window
                 info.Add("Duración " + duration.ToString(@"h\:mm\:ss"));
             }
         }
-        catch (Exception ex) when (SubtitleJob.Describe(ex) is { } message)
+        catch (Exception ex)
         {
-            info.Add(message);
+            info.Add(SubtitleJob.Describe(ex) ?? "sin duración: " + ex.Message);
         }
         IReadOnlyList<string> existing = MediaInfo.ExistingSubtitles(path);
         info.Add(existing.Count == 0 ? "sin subtítulos al lado" : "ya tiene subtítulos: " + string.Join(", ", existing.Select(Path.GetFileName)));
@@ -159,6 +175,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         _cues.Clear();
+        _transcript = null;
         SaveButton.IsEnabled = false;
         Transcript? transcript = await BusyAsync((options, progress, token) => SubtitleJob.RunAsync(options, progress, token));
         if (transcript is null)
