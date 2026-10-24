@@ -6,7 +6,6 @@ using Subtitular.Core;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 using Windows.Storage;
-using Windows.Storage.Pickers;
 
 namespace Subtitular.App;
 
@@ -83,36 +82,26 @@ public sealed partial class MainWindow : Window
         }
     });
 
-    // Los selectores de WinRT fallan (acceso denegado) si la app corre como administrador; Rodaje usa IFileOpenDialog.
-    private const string PickerHint = " Si Subtitular corre como administrador, el diálogo de Windows no se abre: arrastra el archivo a la ventana.";
+    private nint Hwnd => WinRT.Interop.WindowNative.GetWindowHandle(this);
 
     private async void OnChoose(object sender, RoutedEventArgs e) => await GuardedAsync(async () =>
     {
-        FileOpenPicker picker = new();
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
-        foreach (string ext in MediaInfo.Extensions)
+        if (FileDialogs.OpenSingle(Hwnd, "Elegir video o audio", FileDialogs.MediaFilter, FileDialogs.AllFilter) is { } path)
         {
-            picker.FileTypeFilter.Add(ext);
+            await LoadFileAsync(path);
         }
-        if (await picker.PickSingleFileAsync() is { } file)
-        {
-            await LoadFileAsync(file.Path);
-        }
-    }, PickerHint);
+    });
 
-    private async void OnChooseFolder(object sender, RoutedEventArgs e) => await GuardedAsync(async () =>
+    private void OnChooseFolder(object sender, RoutedEventArgs e)
     {
-        FolderPicker picker = new();
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, WinRT.Interop.WindowNative.GetWindowHandle(this));
-        picker.FileTypeFilter.Add("*");
-        if (await picker.PickSingleFolderAsync() is { } folder)
+        if (FileDialogs.ChooseFolder(Hwnd, "Carpeta de salida") is { } folder)
         {
-            OutputDirBox.Text = folder.Path;
+            OutputDirBox.Text = folder;
         }
-    }, PickerHint);
+    }
 
     /// <summary>Lo que escape de un async void tras un await no llega a Application.UnhandledException y cierra la app: aquí sale en la barra.</summary>
-    private async Task GuardedAsync(Func<Task> action, string hint = "")
+    private async Task GuardedAsync(Func<Task> action)
     {
         try
         {
@@ -120,7 +109,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            ShowError((SubtitleJob.Describe(ex) ?? "Error inesperado: " + ex.Message) + hint);
+            ShowError(SubtitleJob.Describe(ex) ?? "Error inesperado: " + ex.Message);
         }
     }
 
