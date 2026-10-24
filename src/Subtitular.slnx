@@ -1,3 +1,9 @@
 <Solution>
-  <Project Path="Subtitular.Cli/Subtitular.Cli.csproj" />
+  <Folder Name="/src/">
+    <Project Path="Subtitular.Cli/Subtitular.Cli.csproj" />
+    <Project Path="Subtitular.Core/Subtitular.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="../tests/Subtitular.Tests/Subtitular.Tests.csproj" />
+  </Folder>
 </Solution>

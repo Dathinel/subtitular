@@ -10,5 +10,6 @@ Herramienta de IA aparte de Rodaje, con interfaz propia. Repositorio público `D
 
 ## Estado (24-oct)
 
-- Fase 0 cerrada: esqueleto, licencia y `src\Subtitular.slnx` con un `Subtitular.Cli` vacío que compila y publica con AOT.
-- **Siguiente:** fase 1, la CLI que hace el trabajo, con pruebas (`..\PLAN.md` y `..\encargos\`).
+- Fase 0 cerrada: esqueleto, licencia y `src\Subtitular.slnx`.
+- Fase 1 cerrada: `Subtitular.Core` (decodificar con FFmpeg, llamar a `Rodaje.Module.Subtitles`, escribir SRT/VTT) y `Subtitular.Cli` con AOT (4,0 MB); 16 pruebas y WER 2,13 % en el corpus. Cifras en `docs/informe-fase-1.md`. El módulo se publica desde `externo/rodaje/modules/Rodaje.Module.Subtitles` y se pasa con `--modulo` o `SUBTITULAR_MODULOS`.
+- **Siguiente:** fase 2, interfaz WinUI 3 sobre `Subtitular.Core`; aparte, `--traducir` y `--voz` (`..\PLAN.md` y `..\encargos\`).

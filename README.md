@@ -2,7 +2,7 @@
 
 Subtítulos automáticos para Windows, en tu PC y sin conexión. Le das un video o un audio y te devuelve el `.srt`, si quieres traducido a otro idioma o leído en voz alta.
 
-> En construcción: fase 0 (esqueleto). Todavía no hace nada.
+> En construcción: fase 1 hecha (CLI que transcribe a SRT/VTT); falta la interfaz, la traducción y la voz.
 
 ## Cómo funciona
 

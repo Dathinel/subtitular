@@ -11,4 +11,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Subtitular.Core\Subtitular.Core.csproj" />
+  </ItemGroup>
+
 </Project>
