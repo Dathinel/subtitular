@@ -1,6 +1,4 @@
 using System.Runtime.Versioning;
-using System.Text;
-using Rodaje.Modules.Protocol;
 using Subtitular.Core;
 
 namespace Subtitular.Cli;
@@ -17,59 +15,35 @@ internal static class Program
         }
 
         string? inputFile = null;
-        string idioma = "auto";
-        string? formato = null;
         string? salida = null;
-        string? ffmpegPath = null;
-        string? moduloPath = null;
-        string device = "auto";
-        string? modelPath = null;
-        int threads = 0;
-
+        JobOptions options = new("");
         for (int i = 0; i < args.Length; i++)
         {
             string arg = args[i];
-            if (arg.Equals("--idioma", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+            string? value = i + 1 < args.Length ? args[i + 1] : null;
+            switch (arg.ToLowerInvariant())
             {
-                idioma = args[++i];
-            }
-            else if (arg.Equals("--formato", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-            {
-                formato = args[++i].ToLowerInvariant();
-            }
-            else if (arg.Equals("--salida", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-            {
-                salida = args[++i];
-            }
-            else if (arg.Equals("--ffmpeg", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-            {
-                ffmpegPath = args[++i];
-            }
-            else if (arg.Equals("--modulo", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-            {
-                moduloPath = args[++i];
-            }
-            else if (arg.Equals("--device", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-            {
-                device = args[++i].ToLowerInvariant();
-            }
-            else if (arg.Equals("--model", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
-            {
-                modelPath = args[++i];
-            }
-            else if (arg.Equals("--threads", StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length && int.TryParse(args[++i], out int t))
-            {
-                threads = t;
-            }
-            else if (!arg.StartsWith('-') && inputFile is null)
-            {
-                inputFile = arg;
-            }
-            else
-            {
-                Console.Error.WriteLine($"Opción desconocida o no válida: {arg}");
-                PrintUsage();
-                return 1;
+                case "--idioma" when value is not null: options = options with { Language = args[++i] }; break;
+                case "--formato" when value is not null: options = options with { Format = args[++i].ToLowerInvariant() }; break;
+                case "--salida" when value is not null: salida = args[++i]; break;
+                case "--traducir" when value is not null: options = options with { TranslateTo = args[++i] }; break;
+                case "--voz": options = options with { Speak = true }; break;
+                case "--ffmpeg" when value is not null: options = options with { Ffmpeg = args[++i] }; break;
+                case "--modulo" when value is not null: options = options with { SubtitlesModule = args[++i] }; break;
+                case "--modulo-traducir" when value is not null: options = options with { TranslateModule = args[++i] }; break;
+                case "--modulo-voz" when value is not null: options = options with { VoiceModule = args[++i] }; break;
+                case "--device" when value is not null: options = options with { Device = args[++i].ToLowerInvariant() }; break;
+                case "--model" when value is not null: options = options with { Model = args[++i] }; break;
+                case "--threads" when value is not null && int.TryParse(value, out int t): i++; options = options with { Threads = t }; break;
+                default:
+                    if (!arg.StartsWith('-') && inputFile is null)
+                    {
+                        inputFile = arg;
+                        break;
+                    }
+                    Console.Error.WriteLine($"Opción desconocida o no válida: {arg}");
+                    PrintUsage();
+                    return 1;
             }
         }
 
@@ -78,37 +52,19 @@ internal static class Program
             Console.Error.WriteLine("Error: Debe especificar un archivo de entrada de video o audio.");
             return 1;
         }
-
-        // Determinar formato (srt o vtt)
-        if (string.IsNullOrWhiteSpace(formato))
+        options = options with { InputFile = inputFile };
+        if (!string.IsNullOrWhiteSpace(salida))
         {
-            if (!string.IsNullOrWhiteSpace(salida) && salida.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase))
+            // --salida fija la carpeta y, por su extensión, el formato; el nombre lo pone el trabajo (archivo[.idioma].ext).
+            options = options with { OutputDir = Path.GetDirectoryName(Path.GetFullPath(salida)) };
+            if (salida.EndsWith(".vtt", StringComparison.OrdinalIgnoreCase))
             {
-                formato = "vtt";
+                options = options with { Format = "vtt" };
             }
-            else
-            {
-                formato = "srt";
-            }
-        }
-
-        if (formato is not ("srt" or "vtt"))
-        {
-            Console.Error.WriteLine($"Error: El formato debe ser «srt» o «vtt», no «{formato}».");
-            return 1;
-        }
-
-        // Determinar ruta de salida
-        if (string.IsNullOrWhiteSpace(salida))
-        {
-            string ext = "." + formato;
-            string? dir = Path.GetDirectoryName(inputFile);
-            string baseName = Path.GetFileNameWithoutExtension(inputFile);
-            salida = string.IsNullOrEmpty(dir) ? baseName + ext : Path.Combine(dir, baseName + ext);
         }
 
         using CancellationTokenSource cts = new();
-        Console.CancelKeyPress += (sender, e) =>
+        Console.CancelKeyPress += (_, e) =>
         {
             e.Cancel = true;
             Console.Error.WriteLine();
@@ -116,86 +72,37 @@ internal static class Program
             cts.Cancel();
         };
 
+        string lastLine = "";
+        Progress<JobProgress> progress = new(p =>
+        {
+            string line = $"\r{p.Label}: {(int)(p.StageFraction * 100)} % (total {(int)(p.Overall * 100)} %)    ";
+            if (line != lastLine)
+            {
+                lastLine = line;
+                Console.Error.Write(line);
+            }
+        });
+
         try
         {
-            Console.Error.WriteLine($"Decodificando audio de «{Path.GetFileName(inputFile)}»...");
-            byte[] audioBytes = await AudioDecoder.DecodeToMemoryAsync(inputFile, ffmpegPath, cts.Token).ConfigureAwait(false);
-
-            Console.Error.WriteLine($"Audio decodificado ({audioBytes.Length / (AudioDecoder.TargetChannels * 4 * AudioDecoder.TargetSampleRate)} s). Iniciando módulo de subtítulos...");
-
-            SubtitleParameters parameters = new(
-                Language: idioma,
-                Device: device,
-                Model: modelPath,
-                Threads: threads);
-
-            string lastStage = "";
-            int lastPercent = -1;
-            Progress<ModuleProgress> progress = new(p =>
-            {
-                int percent = (int)(p.Fraction * 100);
-                if (p.Stage != lastStage || percent != lastPercent)
-                {
-                    lastStage = p.Stage ?? "";
-                    lastPercent = percent;
-                    Console.Error.Write($"\rProgreso: {percent}% ({lastStage})    ");
-                }
-            });
-
-            Transcript transcript = await SubtitleTranscriber.TranscribeAsync(
-                audioBytes,
-                parameters,
-                moduloPath,
-                progress,
-                cts.Token).ConfigureAwait(false);
-
+            Console.Error.WriteLine($"Procesando «{Path.GetFileName(inputFile)}»...");
+            Transcript transcript = await SubtitleJob.RunAsync(options, progress, cts.Token).ConfigureAwait(false);
             Console.Error.WriteLine();
-            Console.Error.WriteLine($"Transcripción completada ({transcript.Segments.Count} segmentos detectados). Guardando subtítulos...");
-
-            string? outDir = Path.GetDirectoryName(salida);
-            if (!string.IsNullOrEmpty(outDir) && !Directory.Exists(outDir))
+            Console.Error.WriteLine($"Transcripción completada ({transcript.Segments.Count} segmentos, idioma {transcript.Language}). Guardando...");
+            (string subtitles, string? wav) = await SubtitleJob.SaveAsync(transcript, options, progress, cts.Token).ConfigureAwait(false);
+            Console.Error.WriteLine();
+            Console.Error.WriteLine($"Subtítulos generados con éxito: {subtitles}");
+            if (wav is not null)
             {
-                Directory.CreateDirectory(outDir);
+                Console.Error.WriteLine($"Voz generada: {wav}");
             }
-
-            using (StreamWriter writer = new(salida, false, new UTF8Encoding(false)))
-            {
-                if (formato == "vtt")
-                {
-                    SubtitleWriter.WriteVtt(transcript, writer);
-                }
-                else
-                {
-                    SubtitleWriter.WriteSrt(transcript, writer);
-                }
-            }
-
-            Console.Error.WriteLine($"Subtítulos generados con éxito: {salida}");
             return 0;
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (SubtitleJob.Describe(ex) is { } message)
         {
             Console.Error.WriteLine();
-            Console.Error.WriteLine("Operación cancelada.");
-            return 1;
-        }
-        catch (SubtitularUserException ex)
-        {
-            Console.Error.WriteLine();
-            Console.Error.WriteLine($"Error: {ex.Message}");
-            return 1;
-        }
-        catch (ModuleCallException ex) when (ex.Message.Contains("Falta el modelo", StringComparison.OrdinalIgnoreCase))
-        {
-            Console.Error.WriteLine();
-            Console.Error.WriteLine($"Error: {ex.Message}");
-            return 1;
-        }
-        catch (ModuleException ex)
-        {
-            Console.Error.WriteLine();
-            Console.Error.WriteLine($"Error del módulo: {ex.Message}");
-            return 2;
+            Console.Error.WriteLine(ex is OperationCanceledException or SubtitularUserException ? message : $"Error: {message}");
+            return ex is OperationCanceledException or SubtitularUserException ? 1 : 2;
         }
         catch (Exception ex)
         {
@@ -212,8 +119,11 @@ internal static class Program
         Console.Error.WriteLine("Opciones:");
         Console.Error.WriteLine("  --idioma <código>     Idioma del audio (auto, es, en...). Por defecto: auto");
         Console.Error.WriteLine("  --formato <srt|vtt>   Formato de salida (srt o vtt). Por defecto: srt");
-        Console.Error.WriteLine("  --salida <ruta>       Ruta del archivo de salida. Por defecto: junto al video");
+        Console.Error.WriteLine("  --salida <ruta>       Carpeta (y extensión) de salida. Por defecto: junto al video");
+        Console.Error.WriteLine("  --traducir <idioma>   Traduce los subtítulos (en, pt-BR, fr, de...) con Rodaje.Module.Translate");
+        Console.Error.WriteLine("  --voz                 Lee los subtítulos en voz alta y deja un WAV junto al video (es, pt, en)");
         Console.Error.WriteLine("  --modulo <ruta>       Ruta del ejecutable Rodaje.Module.Subtitles.exe");
+        Console.Error.WriteLine("  --modulo-traducir <ruta>, --modulo-voz <ruta>  Rutas de los otros módulos");
         Console.Error.WriteLine("  --ffmpeg <ruta>       Ruta del ejecutable ffmpeg.exe");
         Console.Error.WriteLine("  --device <auto|gpu|cpu> Dispositivo de ejecución. Por defecto: auto");
         Console.Error.WriteLine("  --model <ruta>        Ruta alternativa al modelo GGML Whisper");

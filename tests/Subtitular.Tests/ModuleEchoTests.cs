@@ -6,7 +6,7 @@ namespace Subtitular.Tests;
 
 public sealed class ModuleEchoTests
 {
-    private static string EchoExe
+    internal static string EchoExe
     {
         get
         {

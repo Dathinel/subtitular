@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="Subtitular.App/Subtitular.App.csproj" />
     <Project Path="Subtitular.Cli/Subtitular.Cli.csproj" />
     <Project Path="Subtitular.Core/Subtitular.Core.csproj" />
   </Folder>

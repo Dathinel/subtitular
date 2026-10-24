@@ -1,0 +1,14 @@
+# Pruebas a mano (fase 2: la ventana)
+
+Lo que solo Daniel puede juzgar. Antes: `build\publicar.cmd` deja `dist\Subtitular\Subtitular.exe` (ventana) y `Subtitular.Cli.exe`. Los módulos se buscan en `%LOCALAPPDATA%\Rodaje\complementos\modulos\modulo-*` (los que instala Rodaje) o en `SUBTITULAR_MODULOS`.
+
+1. **Arranque.** Doble clic en `Subtitular.exe`. ¿La ventana aparece de golpe, sin pantalla en blanco ni parpadeo? (Medido: ver `informe-fase-2.md`.)
+2. **Arrastrar y soltar.** Arrastra un `.mp4` desde el Explorador a cualquier punto de la ventana. Debe cambiar la cabecera al nombre del archivo y, debajo, la duración y «sin subtítulos al lado» o «ya tiene subtítulos: x.srt». Prueba también un `.txt`: debe salir una barra roja «no es un video ni un audio…», sin cuadro de error.
+3. **Elegir… y Carpeta…** Abren los diálogos de Windows y rellenan la ruta. Cancelar no cambia nada.
+4. **Generar.** Con idioma «Detectar», pulsa «Generar subtítulos». La barra avanza por etapas («Decodificando», «Transcribiendo»…) y el texto de etapa cambia. ¿La ventana sigue respondiendo mientras tanto (se mueve, se redimensiona)?
+5. **Cancelar.** Vuelve a generar y pulsa Cancelar a mitad: en menos de un segundo debe salir «Operación cancelada.» y los botones volver a su sitio.
+6. **Vista previa.** Al terminar, la lista muestra un bloque por subtítulo con su tiempo a la izquierda y el texto editable a la derecha. Corrige una palabra, borra el texto de un bloque entero y pulsa Guardar: el `.srt` de la carpeta de salida debe traer la corrección y no el bloque vacío. ¿Se lee bien la lista con 100 o más bloques? ¿La fuente del tiempo (Consolas) y la del texto son cómodas?
+7. **Traducir a…** Elige «Inglés» y genera: la etapa «Traduciendo» aparece tras la transcripción y la vista previa sale en inglés; el archivo se llama `video.en.srt`.
+8. **Leer en voz alta.** Marca la casilla, genera y guarda: aparece «Generando la voz» y queda `video.wav` (o `video.en.wav`) junto a los subtítulos. Ábrelo: cada frase debe empezar más o menos cuando aparece su subtítulo.
+9. **Errores.** Cambia de nombre la carpeta `modulo-subtitulos` y genera: la barra roja debe decir qué módulo falta y dónde se buscó, en español. Vuelve a ponerle el nombre.
+10. **Tema.** Cambia Windows de claro a oscuro con la ventana abierta: colores y legibilidad.

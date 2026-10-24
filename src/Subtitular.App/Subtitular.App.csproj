@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- La ventana: WinUI 3 sin empaquetar, autocontenida y con Native AOT (misma receta que Rodaje.App). -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>Subtitular.App</RootNamespace>
+    <AssemblyName>Subtitular</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- CsWinRT genera con unsafe las tablas de las colecciones que cruzan a WinRT (ItemsSource) -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <Platforms>x64</Platforms>
+
+    <!-- WinUI 3 sin MSIX ni instalador: el Windows App SDK viaja junto al exe -->
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <!-- Sin esto, una app sin empaquetar no genera su resources.pri y InitializeComponent no encuentra el XAML -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <!-- Main propio (Program.cs) para medir el arranque -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+
+    <PublishAot>true</PublishAot>
+    <CsWinRTAotWarningLevel>2</CsWinRTAotWarningLevel>
+    <IsTrimmable>true</IsTrimmable>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <EnableAotAnalyzer>true</EnableAotAnalyzer>
+    <EnableSingleFileAnalyzer>true</EnableSingleFileAnalyzer>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Subtitular.Core\Subtitular.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Componentes del Windows App SDK en vez del metapaquete, que arrastra Windows ML, Widgets, Search y AI. -->
+    <PackageReference Include="Microsoft.WindowsAppSDK.WinUI" Version="2.3.9" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="2.3.12" />
+    <PackageReference Include="Microsoft.WindowsAppSDK.InteractiveExperiences" Version="2.1.9" />
+  </ItemGroup>
+
+</Project>

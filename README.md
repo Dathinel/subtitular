@@ -2,7 +2,13 @@
 
 Subtítulos automáticos para Windows, en tu PC y sin conexión. Le das un video o un audio y te devuelve el `.srt`, si quieres traducido a otro idioma o leído en voz alta.
 
-> En construcción: fase 1 hecha (CLI que transcribe a SRT/VTT); falta la interfaz, la traducción y la voz.
+> En construcción: fase 2 hecha (ventana WinUI 3 con Native AOT, traducción y voz, también en la CLI); falta la distribución (fase 3).
+
+## Qué hay
+
+- **`Subtitular.exe`** (ventana): suelta un video o audio, elige idioma, formato (SRT/VTT), carpeta, «Traducir a…» y «Leer en voz alta»; barra de progreso por etapa, Cancelar, vista previa editable bloque a bloque y Guardar. Los errores salen en español dentro de la ventana.
+- **`Subtitular.Cli.exe`**: `Subtitular.Cli video.mp4 [--idioma es] [--formato vtt] [--traducir en] [--voz] [--salida carpeta]`. Deja `video.srt` (o `video.en.srt`) y, con `--voz`, `video.wav` con cada frase en su tiempo.
+- Toda la lógica vive en `Subtitular.Core`; la ventana y la CLI solo la llaman. Cifras en `docs/informe-fase-1.md` y `docs/informe-fase-2.md`.
 
 ## Cómo funciona
 
@@ -20,7 +26,10 @@ git clone --recursive https://github.com/Dathinel/subtitular
 cd subtitular
 powershell -NoProfile -ExecutionPolicy Bypass -File build\preparar-entorno.ps1
 build\dotnet.cmd build src\Subtitular.slnx
+build\publicar.cmd
 ```
+
+`build\publicar.cmd` deja la ventana y la CLI publicadas con Native AOT en `dist\Subtitular\`. Los módulos de IA (`Rodaje.Module.Subtitles.exe`, `.Translate.exe`, `.Voice.exe`) se buscan en `SUBTITULAR_MODULOS`, junto al exe (`modulos\`) o donde los instala Rodaje (`%LOCALAPPDATA%\Rodaje\complementos\modulos\modulo-*`).
 
 El SDK de .NET y FFmpeg se instalan en `.entorno\` con huella fijada, sin tocar nada global. Los scripts son los de Rodaje (submódulo `externo/rodaje`, fijado a un commit). Para no bajar el SDK otra vez se puede apuntar `RODAJE_ENTORNO` al `.entorno` de Rodaje.
 
