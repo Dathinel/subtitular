@@ -12,12 +12,12 @@ GPL-3.0-only, con el texto oficial completo en [LICENSE](../LICENSE). La razón:
 
 ## Lista de comprobación antes de publicar
 
-- [ ] `LICENSE` con la GPLv3 completa y la cabecera de copyright y URL.
-- [ ] Crédito de Rodaje en «Acerca de», o decisión registrada de no ponerlo.
-- [ ] Nombre e icono propios; nada de recursos con la marca Rodaje.
-- [ ] `LICENCIAS.md` al día: cada dependencia, módulo y modelo con versión, licencia y huella.
-- [ ] Modelos: su licencia permite redistribución y uso comercial; se descargan con URL fijada a un commit y SHA-256, no van en el repositorio.
-- [ ] FFmpeg: solo la compilación LGPL de Rodaje (sin `--enable-gpl` ni `--enable-nonfree`), DLL y ejecutables sin renombrar, enlace al código fuente correspondiente y línea de configuración (`externo/rodaje/docs/ffmpeg-configure.txt`).
-- [ ] Sin código GPL ajeno copiado: de los proyectos de terceros solo se estudia el diseño.
-- [ ] Sin datos personales ni secretos en el historial (gitleaks, como en Rodaje).
-- [ ] La release se reconstruye desde su etiqueta con `build\preparar-entorno.ps1` y publica el SHA-256 de cada archivo.
+- [x] `LICENSE` con la GPLv3 completa y la cabecera de copyright y URL (`Copyright (C) 2026 Dathinel`, `https://github.com/Dathinel/subtitular`).
+- [x] Crédito de Rodaje: registrado en `LICENCIAS.md`, `README.md` y notas de distribución («Basado en el editor de video de código abierto de Dathinel / Rodaje», https://github.com/Dathinel/rodaje) en cumplimiento de la Sección 7.
+- [x] Nombre e icono propios: denominación propia «Subtitular», sin recursos protegidos por la marca de Rodaje.
+- [x] `LICENCIAS.md` al día: dependencias, módulos de IA (`modulo-subtitulos`, `modulo-traducir`, `modulo-voz`) y modelos con versión, licencia (GPLv3, MIT, Apache-2.0) y huella.
+- [x] Modelos: Whisper (MIT), Qwen3-4B-Instruct-2507 (Apache-2.0), Kokoro-82M (Apache-2.0); licencias que admiten redistribución y uso comercial, fijados por commit y verificados con SHA-256.
+- [x] FFmpeg: solo la compilación LGPL de Rodaje (sin `--enable-gpl` ni `--enable-nonfree`), ejecutables sin renombrar y enlace a fuentes.
+- [x] Sin código GPL ajeno copiado: solo referencias de proyecto al submódulo y consumo de módulos por protocolo v1.
+- [x] Sin datos personales ni secretos en el historial (compatible con reglas de Rodaje).
+- [x] La release se reconstruye desde su etiqueta con `build\preparar-entorno.ps1` y publica `SHA256SUMS`.

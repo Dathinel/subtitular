@@ -1,0 +1,56 @@
+name: Release
+
+'on':
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+
+jobs:
+  borrador:
+    name: Crear release en borrador
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Clonar repositorio con submódulos
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Preparar entorno (.NET SDK y FFmpeg)
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\preparar-entorno.ps1
+
+      - name: Ejecutar distribución (zip AOT, instalador, catálogo y notas)
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File build\distribuir.ps1
+
+      - name: Crear release en borrador (nunca publica)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $props = [xml](Get-Content -LiteralPath 'Directory.Build.props' -Raw -Encoding UTF8)
+          $version = @($props.Project.PropertyGroup | ForEach-Object { $_.Version } | Where-Object { $_ })[0]
+          $tag = "v$version"
+          $notas = "dist/notas-version.md"
+          $artefactos = @(
+              (Resolve-Path "dist/Subtitular-$version-win-x64.zip").Path,
+              (Resolve-Path "dist/SHA256SUMS").Path,
+              (Resolve-Path "dist/catalogo-subtitular.json").Path
+          )
+          $instalador = "dist/Subtitular-$version-instalador.exe"
+          if (Test-Path $instalador) {
+              $artefactos += (Resolve-Path $instalador).Path
+          }
+          gh release create $tag --draft --title "Subtitular $version" --notes-file $notas @artefactos

@@ -2,7 +2,7 @@
 
 Subtítulos automáticos para Windows, en tu PC y sin conexión. Le das un video o un audio y te devuelve el `.srt`, si quieres traducido a otro idioma o leído en voz alta.
 
-> En construcción: fase 2 hecha (ventana WinUI 3 con Native AOT, traducción y voz, también en la CLI); falta la distribución (fase 3).
+> Fase 3 completada: distribución AOT autocontenida (zip e instalador Inno Setup), entrada de catálogo firmado de Rodaje y flujos de GitHub Actions.
 
 ## Qué hay
 
@@ -32,6 +32,21 @@ build\publicar.cmd
 `build\publicar.cmd` deja la ventana y la CLI publicadas con Native AOT en `dist\Subtitular\`. Los módulos de IA (`Rodaje.Module.Subtitles.exe`, `.Translate.exe`, `.Voice.exe`) se buscan en `SUBTITULAR_MODULOS`, junto al exe (`modulos\`) o donde los instala Rodaje (`%LOCALAPPDATA%\Rodaje\complementos\modulos\modulo-*`).
 
 El SDK de .NET y FFmpeg se instalan en `.entorno\` con huella fijada, sin tocar nada global. Los scripts son los de Rodaje (submódulo `externo/rodaje`, fijado a un commit). Para no bajar el SDK otra vez se puede apuntar `RODAJE_ENTORNO` al `.entorno` de Rodaje.
+
+## Distribución y catálogo
+
+Para empaquetar la distribución:
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File build\distribuir.ps1
+```
+Genera en `dist\`:
+- `Subtitular-<versión>-win-x64.zip`: autocontenido (App, Cli, licencias, README corto y `herramienta.json`).
+- `Subtitular-<versión>-instalador.exe`: instalador por usuario con Inno Setup (sin permisos de administrador).
+- `SHA256SUMS` / `SHA256SUMS.txt`: huellas de los artefactos.
+- `notas-version.md`: notas extraídas desde `CHANGELOG.md`.
+- `catalogo-subtitular.json`: entrada `app` para el catálogo firmado de Rodaje.
+
+**Firma del catálogo:** `build\catalogo-entrada.ps1` deja el JSON en `dist\catalogo-subtitular.json` sin firmar; Daniel lo firma con la clave privada del catálogo usando `firmar-indice.ps1` del repositorio `Dathinel/rodaje-catalogo`.
 
 ## Licencia
 

@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\externo\rodaje\src\Rodaje.Modules.Protocol\Rodaje.Modules.Protocol.csproj" />
     <ProjectReference Include="..\..\externo\rodaje\modules\Rodaje.Module.Echo\Rodaje.Module.Echo.csproj" />
     <ProjectReference Include="..\..\externo\rodaje\modules\Rodaje.Module.Subtitles\Rodaje.Module.Subtitles.csproj" />
+    <ProjectReference Include="..\..\externo\rodaje\src\Rodaje.Packages\Rodaje.Packages.csproj" />
   </ItemGroup>
 
   <ItemGroup>
