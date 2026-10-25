@@ -14,7 +14,7 @@ GPL-3.0-only, con el texto oficial completo en [LICENSE](../LICENSE). La razón:
 
 - [x] `LICENSE` con la GPLv3 completa y la cabecera de copyright y URL (`Copyright (C) 2026 Dathinel`, `https://github.com/Dathinel/subtitular`).
 - [x] Término 2 de la licencia de Rodaje (canales de distribución): «Basado en el editor de video de código abierto de Dathinel / Rodaje (https://github.com/Dathinel/rodaje)», con la declaración de proyecto libre y gratuito, al principio del `README.txt` del zip y de `notas-version.md`, que `release.yml` usa como descripción de la release; también en `README.md` y `LICENCIAS.md`.
-- [ ] Término 1 (atribución en la ventana, con enlace): lo hace el worktree `pulido`; se marca cuando se una.
+- [x] Término 1 (atribución en la ventana, con enlace): «Acerca de» en la cabecera (24-oct) con el texto literal como `HyperlinkButton` al repositorio, más versión y GPLv3 de Subtitular.
 - [ ] Windows App SDK y proyección del Windows SDK: binarios de Microsoft con términos propios dentro del zip autocontenido (unas 60 DLL, `.winmd`, `.pri` y carpetas de idioma). Misma consulta al abogado que Rodaje (`externo/rodaje/docs/legal.md`, «Compatibilidad con la GPLv3»): excepción de «System Libraries» o permiso adicional de enlace.
 - [x] Inno Setup 7.1.0: su licencia permite redistribuir el programa de instalación dentro del instalador; anotado en `LICENCIAS.md`.
 - [x] Nombre e icono propios: denominación propia «Subtitular», sin recursos protegidos por la marca de Rodaje.

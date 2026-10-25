@@ -8,6 +8,7 @@
     <RootNamespace>Subtitular.App</RootNamespace>
     <AssemblyName>Subtitular</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\assets\marca\subtitular.ico</ApplicationIcon>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
@@ -40,6 +41,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Subtitular.Core\Subtitular.Core.csproj" />
+    <!-- La ventana y la barra de tareas (AppWindow.SetIcon) usan el .ico suelto junto al exe. -->
+    <Content Include="..\..\assets\marca\subtitular.ico" Link="subtitular.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

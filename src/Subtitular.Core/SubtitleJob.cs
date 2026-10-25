@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Runtime.Versioning;
 using System.Text;
 using Rodaje.Modules.Protocol;
@@ -34,6 +35,20 @@ public readonly record struct JobProgress(JobStage Stage, double StageFraction, 
         JobStage.Translate => "Traduciendo",
         _ => "Generando la voz",
     };
+
+    /// <summary>Etapa, porcentaje y tiempo transcurrido; el que falta se estima por el total y solo con base (≥ 5 %).</summary>
+    public string Status(TimeSpan elapsed)
+    {
+        string s = $"{Label} · {(int)(StageFraction * 100)} % · {FormatClock(elapsed)}";
+        return Overall >= 0.05 ? s + $" · quedan ~{FormatClock(elapsed * (1 / Overall - 1))}" : s;
+    }
+
+    /// <summary>m:ss, y h:mm:ss a partir de una hora.</summary>
+    public static string FormatClock(TimeSpan t)
+    {
+        t = t < TimeSpan.Zero ? TimeSpan.Zero : t;
+        return t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture) : t.ToString(@"m\:ss", CultureInfo.InvariantCulture);
+    }
 
     public static JobProgress Of(IReadOnlyList<JobStage> stages, JobStage stage, double fraction)
     {

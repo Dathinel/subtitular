@@ -5,8 +5,25 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Subtitular.App"
     Title="Subtitular">
-    <Grid x:Name="Root" Padding="20" RowSpacing="14" AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop"
-          Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    <!-- Rejilla de 8 px: márgenes 24, separación 16, dentro de las tarjetas 8/16. -->
+    <Grid x:Name="Root" Padding="24,16,24,24" RowSpacing="16" AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop"
+          Background="{ThemeResource FondoBrush}">
+        <Grid.Resources>
+            <!-- La burbuja del icono, para la cabecera y el estado vacío (mismo dibujo que assets/marca/subtitular.svg). -->
+            <x:String x:Key="Burbuja">M48 24h160a32 32 0 0 1 32 32v112a32 32 0 0 1-32 32H120l-56 44v-44H48a32 32 0 0 1-32-32V56a32 32 0 0 1 32-32z</x:String>
+            <Storyboard x:Name="BarStory">
+                <DoubleAnimation x:Name="BarAnim" Storyboard.TargetName="Progress" Storyboard.TargetProperty="Value" Duration="0:0:0.3" EnableDependentAnimation="True" />
+            </Storyboard>
+            <Storyboard x:Name="DoneStory">
+                <DoubleAnimation Storyboard.TargetName="DoneIcon" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3" />
+                <DoubleAnimation Storyboard.TargetName="DoneScale" Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.4">
+                    <DoubleAnimation.EasingFunction><BackEase Amplitude="0.5" EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+                <DoubleAnimation Storyboard.TargetName="DoneScale" Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.4">
+                    <DoubleAnimation.EasingFunction><BackEase Amplitude="0.5" EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                </DoubleAnimation>
+            </Storyboard>
+        </Grid.Resources>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -16,66 +33,149 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" BorderThickness="2" CornerRadius="8" Padding="16" MinHeight="90"
-                BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" Background="{ThemeResource LayerFillColorDefaultBrush}">
+        <!-- Cabecera: icono, nombre y lema; a la derecha, «Acerca de» con la versión, la licencia y el crédito de Rodaje (término 1 de su licencia). -->
+        <HyperlinkButton Grid.Row="0" Content="Acerca de" HorizontalAlignment="Right" VerticalAlignment="Top" Canvas.ZIndex="1" Click="OnAbout">
+            <FlyoutBase.AttachedFlyout>
+                <Flyout>
+                    <StackPanel Spacing="8" MaxWidth="400">
+                        <TextBlock Text="Subtitular" Style="{StaticResource Seccion}" Margin="0" />
+                        <TextBlock x:Name="VersionText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                        <TextBlock TextWrapping="Wrap" Text="Software libre bajo la licencia GPLv3: puedes usarlo, estudiarlo, modificarlo y redistribuirlo con la misma licencia." />
+                        <HyperlinkButton Content="Código fuente y licencia: github.com/Dathinel/subtitular" NavigateUri="https://github.com/Dathinel/subtitular" Padding="0" />
+                        <HyperlinkButton NavigateUri="https://github.com/Dathinel/rodaje" Padding="0">
+                            <TextBlock TextWrapping="Wrap" Text="Basado en el editor de video de código abierto de Dathinel / Rodaje (https://github.com/Dathinel/rodaje)" />
+                        </HyperlinkButton>
+                    </StackPanel>
+                </Flyout>
+            </FlyoutBase.AttachedFlyout>
+        </HyperlinkButton>
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16">
+            <Viewbox Width="48" Height="48" VerticalAlignment="Center">
+                <Canvas Width="256" Height="256">
+                    <Path Data="{StaticResource Burbuja}" Fill="{ThemeResource AcentoBrush}" />
+                    <Rectangle Canvas.Left="56" Canvas.Top="64" Width="128" Height="16" RadiusX="8" RadiusY="8" Fill="{ThemeResource PanelBrush}" />
+                    <Rectangle Canvas.Left="56" Canvas.Top="96" Width="72" Height="16" RadiusX="8" RadiusY="8" Fill="{ThemeResource PanelBrush}" Opacity="0.7" />
+                    <Rectangle Canvas.Left="56" Canvas.Top="146" Width="12" Height="20" RadiusX="6" RadiusY="6" Fill="{ThemeResource PanelBrush}" />
+                    <Rectangle Canvas.Left="80" Canvas.Top="132" Width="12" Height="48" RadiusX="6" RadiusY="6" Fill="{ThemeResource PanelBrush}" />
+                    <Rectangle Canvas.Left="104" Canvas.Top="140" Width="12" Height="32" RadiusX="6" RadiusY="6" Fill="{ThemeResource PanelBrush}" />
+                    <Rectangle Canvas.Left="128" Canvas.Top="124" Width="12" Height="64" RadiusX="6" RadiusY="6" Fill="{ThemeResource PanelBrush}" />
+                    <Rectangle Canvas.Left="152" Canvas.Top="136" Width="12" Height="40" RadiusX="6" RadiusY="6" Fill="{ThemeResource PanelBrush}" />
+                    <Rectangle Canvas.Left="176" Canvas.Top="148" Width="12" Height="16" RadiusX="6" RadiusY="6" Fill="{ThemeResource PanelBrush}" />
+                    <Rectangle Canvas.Left="200" Canvas.Top="140" Width="12" Height="32" RadiusX="6" RadiusY="6" Fill="{ThemeResource PanelBrush}" />
+                </Canvas>
+            </Viewbox>
+            <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="Subtitular" Style="{StaticResource Titulo}" />
+                <TextBlock Text="Lo que se dice, escrito" Style="{StaticResource Lema}" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- Archivo: zona para soltar. -->
+        <Border Grid.Row="1" Style="{StaticResource Tarjeta}" Translation="0,0,8" BorderBrush="{ThemeResource AcentoBrush}" Background="{ThemeResource AcentoSuaveBrush}">
             <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                 <Button Content="Elegir…" Click="OnChoose" />
-                <StackPanel VerticalAlignment="Center">
+                <StackPanel VerticalAlignment="Center" Spacing="4">
                     <TextBlock x:Name="FileName" Text="Suelta aquí un video o un audio" Style="{ThemeResource BodyStrongTextBlockStyle}" />
-                    <TextBlock x:Name="FileInfo" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="FileInfo" Text="mp4, mkv, mov, mp3, wav y más; o pulsa Elegir…" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                 </StackPanel>
             </StackPanel>
         </Border>
 
-        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
-            <ComboBox x:Name="LanguageBox" Header="Idioma del audio" MinWidth="170" />
-            <ComboBox x:Name="FormatBox" Header="Formato" MinWidth="100" SelectedIndex="0">
-                <ComboBoxItem Content="SRT" Tag="srt" />
-                <ComboBoxItem Content="VTT" Tag="vtt" />
-            </ComboBox>
-            <ComboBox x:Name="TranslateBox" Header="Traducir a…" MinWidth="200" />
-            <CheckBox x:Name="SpeakBox" Content="Leer en voz alta (WAV junto al video)" VerticalAlignment="Bottom" />
-        </StackPanel>
+        <!-- Ajustes. -->
+        <Border Grid.Row="2" Style="{StaticResource Tarjeta}" Translation="0,0,8">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Ajustes" Style="{StaticResource Seccion}" />
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <ComboBox x:Name="LanguageBox" Header="Idioma del audio" MinWidth="168" />
+                    <ComboBox x:Name="FormatBox" Header="Formato" MinWidth="96" SelectedIndex="0">
+                        <ComboBoxItem Content="SRT" Tag="srt" />
+                        <ComboBoxItem Content="VTT" Tag="vtt" />
+                    </ComboBox>
+                    <ComboBox x:Name="TranslateBox" Header="Traducir a…" MinWidth="200" />
+                </StackPanel>
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="OutputDirBox" Header="Carpeta de salida" PlaceholderText="Junto al video" />
+                    <Button Grid.Column="1" Content="Carpeta…" Click="OnChooseFolder" VerticalAlignment="Bottom" />
+                    <CheckBox x:Name="SpeakBox" Grid.Column="2" Content="Leer en voz alta (WAV junto al video)" Margin="16,0,0,0" VerticalAlignment="Bottom" />
+                </Grid>
+            </StackPanel>
+        </Border>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
-            <TextBox x:Name="OutputDirBox" Header="Carpeta de salida" PlaceholderText="Junto al video" MinWidth="460" />
-            <Button Content="Carpeta…" Click="OnChooseFolder" VerticalAlignment="Bottom" />
-        </StackPanel>
-
-        <Grid Grid.Row="3" ColumnSpacing="12">
+        <!-- Acción y progreso: etapa, porcentaje, tiempo y tic al terminar. -->
+        <Grid Grid.Row="3" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Button x:Name="RunButton" Content="Generar subtítulos" Style="{ThemeResource AccentButtonStyle}" Click="OnRun" IsEnabled="False" />
             <Button x:Name="CancelButton" Grid.Column="1" Content="Cancelar" Click="OnCancel" IsEnabled="False" />
-            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4">
+            <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4" Margin="8,0,0,0">
                 <TextBlock x:Name="StageText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 <ProgressBar x:Name="Progress" Maximum="100" />
             </StackPanel>
+            <FontIcon x:Name="DoneIcon" Grid.Column="3" Glyph="&#xE73E;" FontSize="24" Foreground="{ThemeResource AcentoBrush}" Opacity="0"
+                      RenderTransformOrigin="0.5,0.5" AutomationProperties.Name="Hecho">
+                <FontIcon.RenderTransform>
+                    <ScaleTransform x:Name="DoneScale" ScaleX="0.6" ScaleY="0.6" />
+                </FontIcon.RenderTransform>
+            </FontIcon>
         </Grid>
 
-        <ListView Grid.Row="4" x:Name="CueList" SelectionMode="None" IsItemClickEnabled="False"
-                  BorderThickness="1" BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}" CornerRadius="8" Padding="8">
-            <ListView.ItemTemplate>
-                <DataTemplate x:DataType="local:CueItem">
-                    <Grid ColumnSpacing="12" Padding="0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="{x:Bind Time}" FontFamily="Consolas" VerticalAlignment="Center"
-                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-                        <TextBox Grid.Column="1" Text="{x:Bind Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
-                    </Grid>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+        <!-- Subtítulos: lista editable, o el estado vacío que dice qué hacer. -->
+        <Border Grid.Row="4" Style="{StaticResource Tarjeta}" Translation="0,0,8" Padding="16,16,16,8">
+            <Grid RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Subtítulos" Style="{StaticResource Seccion}" Margin="0" />
+                <ListView Grid.Row="1" x:Name="CueList" SelectionMode="None" IsItemClickEnabled="False" Margin="-8,0">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="local:CueItem">
+                            <Grid ColumnSpacing="16" Padding="0,4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{x:Bind Time}" FontFamily="Cascadia Mono, Consolas" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                <TextBox Grid.Column="1" Text="{x:Bind Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+                <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16" MaxWidth="440">
+                    <Viewbox Width="120" Height="120">
+                        <Canvas Width="256" Height="256">
+                            <Path Data="{StaticResource Burbuja}" Stroke="{ThemeResource AcentoBrush}" StrokeThickness="10" Fill="{ThemeResource AcentoSuaveBrush}" />
+                            <Rectangle Canvas.Left="56" Canvas.Top="64" Width="128" Height="16" RadiusX="8" RadiusY="8" Fill="{ThemeResource AcentoBrush}" Opacity="0.5" />
+                            <Rectangle Canvas.Left="56" Canvas.Top="96" Width="72" Height="16" RadiusX="8" RadiusY="8" Fill="{ThemeResource AcentoBrush}" Opacity="0.3" />
+                            <Rectangle Canvas.Left="56" Canvas.Top="146" Width="12" Height="20" RadiusX="6" RadiusY="6" Fill="{ThemeResource AcentoBrush}" />
+                            <Rectangle Canvas.Left="80" Canvas.Top="132" Width="12" Height="48" RadiusX="6" RadiusY="6" Fill="{ThemeResource AcentoBrush}" />
+                            <Rectangle Canvas.Left="104" Canvas.Top="140" Width="12" Height="32" RadiusX="6" RadiusY="6" Fill="{ThemeResource AcentoBrush}" />
+                            <Rectangle Canvas.Left="128" Canvas.Top="124" Width="12" Height="64" RadiusX="6" RadiusY="6" Fill="{ThemeResource AcentoBrush}" />
+                            <Rectangle Canvas.Left="152" Canvas.Top="136" Width="12" Height="40" RadiusX="6" RadiusY="6" Fill="{ThemeResource AcentoBrush}" />
+                            <Rectangle Canvas.Left="176" Canvas.Top="148" Width="12" Height="16" RadiusX="6" RadiusY="6" Fill="{ThemeResource AcentoBrush}" />
+                            <Rectangle Canvas.Left="200" Canvas.Top="140" Width="12" Height="32" RadiusX="6" RadiusY="6" Fill="{ThemeResource AcentoBrush}" />
+                        </Canvas>
+                    </Viewbox>
+                    <TextBlock Text="Aquí saldrán los subtítulos" Style="{StaticResource Seccion}" HorizontalAlignment="Center" Margin="0" />
+                    <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="Suelta un video o un audio, elige el idioma y pulsa «Generar subtítulos». Podrás corregir cada bloque antes de guardarlo." />
+                </StackPanel>
+            </Grid>
+        </Border>
 
         <StackPanel Grid.Row="5" Spacing="8">
             <InfoBar x:Name="Notice" IsOpen="False" IsClosable="True" />
-            <Button x:Name="SaveButton" Content="Guardar" Click="OnSave" IsEnabled="False" HorizontalAlignment="Right" />
+            <Button x:Name="SaveButton" Content="Guardar" Style="{ThemeResource AccentButtonStyle}" Click="OnSave" IsEnabled="False" HorizontalAlignment="Right" />
         </StackPanel>
     </Grid>
 </Window>

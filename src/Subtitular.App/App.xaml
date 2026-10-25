@@ -3,11 +3,78 @@
     x:Class="Subtitular.App.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Identidad de Subtitular: terracota/ámbar sobre marfil (claro) o carbón cálido (oscuro), títulos en Sitka Display.
+         Sigue el tema de Windows (sin RequestedTheme). Los pinceles de acento del sistema se sustituyen para que
+         botones, barras y casillas lleven el acento propio; en contraste alto mandan los colores del sistema. -->
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AcentoBrush" Color="#A3471A" />
+                    <SolidColorBrush x:Key="AcentoSuaveBrush" Color="#A3471A" Opacity="0.14" />
+                    <SolidColorBrush x:Key="FondoBrush" Color="#F7F2E8" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#FFFCF6" />
+                    <SolidColorBrush x:Key="PanelBordeBrush" Color="#E4DACA" />
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#A3471A" />
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#A3471A" Opacity="0.9" />
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#A3471A" Opacity="0.8" />
+                    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#8E3D15" />
+                    <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="#8E3D15" />
+                    <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush" Color="#A3471A" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AcentoBrush" Color="#E39A4C" />
+                    <SolidColorBrush x:Key="AcentoSuaveBrush" Color="#E39A4C" Opacity="0.16" />
+                    <SolidColorBrush x:Key="FondoBrush" Color="#1F1B17" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="#2A2521" />
+                    <SolidColorBrush x:Key="PanelBordeBrush" Color="#3D362E" />
+                    <SolidColorBrush x:Key="AccentFillColorDefaultBrush" Color="#E39A4C" />
+                    <SolidColorBrush x:Key="AccentFillColorSecondaryBrush" Color="#E39A4C" Opacity="0.9" />
+                    <SolidColorBrush x:Key="AccentFillColorTertiaryBrush" Color="#E39A4C" Opacity="0.8" />
+                    <SolidColorBrush x:Key="AccentTextFillColorPrimaryBrush" Color="#F0B36E" />
+                    <SolidColorBrush x:Key="AccentTextFillColorSecondaryBrush" Color="#F0B36E" />
+                    <SolidColorBrush x:Key="AccentTextFillColorTertiaryBrush" Color="#E39A4C" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="HighContrast">
+                    <SolidColorBrush x:Key="AcentoBrush" Color="{ThemeResource SystemColorHighlightColor}" />
+                    <SolidColorBrush x:Key="AcentoSuaveBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="FondoBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="PanelBrush" Color="{ThemeResource SystemColorWindowColor}" />
+                    <SolidColorBrush x:Key="PanelBordeBrush" Color="{ThemeResource SystemColorWindowTextColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <ThemeShadow x:Key="Sombra" />
+            <FontFamily x:Key="FuenteTitulo">Sitka Display, Georgia, Cambria</FontFamily>
+            <Style x:Key="Titulo" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource FuenteTitulo}" />
+                <Setter Property="FontSize" Value="30" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Foreground" Value="{ThemeResource AcentoBrush}" />
+            </Style>
+            <Style x:Key="Lema" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource FuenteTitulo}" />
+                <Setter Property="FontSize" Value="16" />
+                <Setter Property="FontStyle" Value="Italic" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <Style x:Key="Seccion" TargetType="TextBlock">
+                <Setter Property="FontFamily" Value="{StaticResource FuenteTitulo}" />
+                <Setter Property="FontSize" Value="18" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Margin" Value="0,0,0,8" />
+            </Style>
+            <Style x:Key="Tarjeta" TargetType="Border">
+                <Setter Property="Background" Value="{ThemeResource PanelBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource PanelBordeBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="Padding" Value="16" />
+                <Setter Property="Shadow" Value="{StaticResource Sombra}" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

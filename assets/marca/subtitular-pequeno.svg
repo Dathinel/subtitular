@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- De 16 a 32 px: solo la burbuja y la onda, con trazos más gruesos. -->
+  <path d="M40 16h176a40 40 0 0 1 40 40v112a40 40 0 0 1-40 40H120l-64 48v-48H40a40 40 0 0 1-40-40V56a40 40 0 0 1 40-40z" fill="#B5541C"/>
+  <g fill="#F7F2E8">
+    <rect x="44" y="92" width="28" height="40" rx="14"/>
+    <rect x="92" y="60" width="28" height="104" rx="14"/>
+    <rect x="140" y="80" width="28" height="64" rx="14"/>
+    <rect x="188" y="100" width="28" height="24" rx="14"/>
+  </g>
+</svg>

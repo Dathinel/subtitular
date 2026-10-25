@@ -1,11 +1,16 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
 using Subtitular.Core;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Graphics;
 using Windows.Storage;
+using WinRT;
 
 namespace Subtitular.App;
 
@@ -37,8 +42,31 @@ public sealed partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        AppWindow.Resize(new SizeInt32(1000, 800));
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "subtitular.ico"));
+        // Con AOT, el cast directo del presentador falla (InvalidCastException): hay que pasar por As<>.
+        OverlappedPresenter presenter = AppWindow.Presenter.As<OverlappedPresenter>();
+        presenter.PreferredMinimumWidth = WindowPlacement.MinWidth;
+        presenter.PreferredMinimumHeight = WindowPlacement.MinHeight;
+        // Vuelve donde quedó, salvo que esa pantalla ya no exista.
+        if (WindowPlacement.Load(WindowPlacement.DefaultPath) is { } placement
+            && DisplayArea.GetFromPoint(new PointInt32(placement.X + 32, placement.Y + 32), DisplayAreaFallback.None) is not null)
+        {
+            AppWindow.MoveAndResize(new RectInt32(placement.X, placement.Y, placement.Width, placement.Height));
+        }
+        else
+        {
+            AppWindow.Resize(new SizeInt32(1000, 800));
+        }
+        Closed += (_, _) =>
+        {
+            if (presenter.State == OverlappedPresenterState.Restored)
+            {
+                new WindowPlacement(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height).Save(WindowPlacement.DefaultPath);
+            }
+        };
+        VersionText.Text = "Versión " + (typeof(App).Assembly.GetName().Version?.ToString(3) ?? "?") + " · Copyright (C) 2026 Dathinel";
         CueList.ItemsSource = _cues;
+        _cues.CollectionChanged += (_, _) => EmptyState.Visibility = _cues.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         foreach ((string id, string name) in AudioLanguages)
         {
             LanguageBox.Items.Add(new ComboBoxItem { Content = name, Tag = id });
@@ -157,6 +185,8 @@ public sealed partial class MainWindow : Window
 
     private void OnCancel(object sender, RoutedEventArgs e) => _cts?.Cancel();
 
+    private void OnAbout(object sender, RoutedEventArgs e) => FlyoutBase.ShowAttachedFlyout((FrameworkElement)sender);
+
     private async void OnRun(object sender, RoutedEventArgs e)
     {
         if (_file is null)
@@ -202,14 +232,29 @@ public sealed partial class MainWindow : Window
         RunButton.IsEnabled = false;
         SaveButton.IsEnabled = false;
         CancelButton.IsEnabled = true;
+        DoneIcon.Opacity = 0;
+        DoneScale.ScaleX = DoneScale.ScaleY = 0.6;
+        // Hasta el primer aviso del módulo (cargar el modelo) la barra late indeterminada y el reloj corre.
+        Progress.IsIndeterminate = true;
+        Stopwatch clock = Stopwatch.StartNew();
+        JobProgress? last = null;
+        DispatcherQueueTimer timer = DispatcherQueue.CreateTimer();
+        timer.Interval = TimeSpan.FromMilliseconds(500);
+        timer.Tick += (_, _) => StageText.Text = last?.Status(clock.Elapsed) ?? "Preparando · " + JobProgress.FormatClock(clock.Elapsed);
+        timer.Start();
         Progress<JobProgress> progress = new(p =>
         {
-            StageText.Text = $"{p.Label}: {(int)(p.StageFraction * 100)} %";
-            Progress.Value = p.Overall * 100;
+            last = p;
+            Progress.IsIndeterminate = false;
+            StageText.Text = p.Status(clock.Elapsed);
+            BarAnim.To = p.Overall * 100;
+            BarStory.Begin();
         });
         try
         {
-            return await work(Options(), progress, _cts.Token);
+            T result = await work(Options(), progress, _cts.Token);
+            DoneStory.Begin();
+            return result;
         }
         catch (Exception ex)
         {
@@ -218,9 +263,12 @@ public sealed partial class MainWindow : Window
         }
         finally
         {
+            timer.Stop();
             _cts.Dispose();
             _cts = null;
             StageText.Text = "";
+            BarStory.Stop();
+            Progress.IsIndeterminate = false;
             Progress.Value = 0;
             RunButton.IsEnabled = true;
             SaveButton.IsEnabled = _transcript is not null;

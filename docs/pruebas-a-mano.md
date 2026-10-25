@@ -12,3 +12,15 @@ Lo que solo Daniel puede juzgar. Antes: `build\publicar.cmd` deja `dist\Subtitul
 8. **Leer en voz alta.** Marca la casilla, genera y guarda: aparece «Generando la voz» y queda `video.voz.wav` (o `video.en.voz.wav`) junto a los subtítulos. Defecto visto el 24-oct: con un `voz.wav` de entrada, la voz se guardaba como `voz.wav`, encima del audio original; ahora la voz lleva siempre `.voz.wav` y ninguna salida puede coincidir con la entrada (si pasara, se le añade `.subtitular`). Comprobar con un `.wav` de entrada que el original sigue intacto. Ábrelo: cada frase debe empezar más o menos cuando aparece su subtítulo.
 9. **Errores.** Cambia de nombre la carpeta `modulo-subtitulos` y genera: la barra roja debe decir qué módulo falta y dónde se buscó, en español. Vuelve a ponerle el nombre.
 10. **Tema.** Cambia Windows de claro a oscuro con la ventana abierta: colores y legibilidad.
+
+## Identidad (pulido visual, 24-oct)
+
+Lo que solo se juzga a ojo. Sin captura: la app no tiene `--captura`.
+
+1. **Tres segundos.** Abre `Subtitular.exe`: cabecera con la burbuja terracota, «Subtitular» en Sitka Display y el lema «Lo que se dice, escrito». ¿Se nota que no es Rodaje ni una app genérica de WinUI? ¿El icono de la barra de tareas y del exe se reconoce a 16 px?
+2. **Claro y oscuro.** Cambia el tema de Windows con la ventana abierta: marfil con terracota en claro, carbón cálido con ámbar en oscuro. ¿Se lee bien el texto de la etapa, el tiempo de cada bloque (naranja oscuro/claro) y los botones?
+3. **Estado vacío.** Sin generar nada, la tarjeta «Subtítulos» muestra la burbuja dibujada y la frase de qué hacer. Al generar desaparece; al soltar otro archivo vuelve.
+4. **Progreso.** Pulsa Generar: la barra late indeterminada mientras carga el modelo («Preparando · 0:03»), luego avanza suave con «Transcribiendo · 45 % · 0:12 · quedan ~0:15». Al terminar aparece un tic naranja a la derecha, que se queda hasta la siguiente acción. ¿La estimación se acerca al tiempo real?
+5. **Ventana.** Mueve y redimensiona la ventana, ciérrala y ábrela: vuelve al mismo sitio y tamaño (`%LOCALAPPDATA%\Dathinel\Subtitular\ventana.json`). No se deja bajar de 800×700. Si la cierras maximizada, se queda el último tamaño normal.
+6. **Acerca de.** Arriba a la derecha: versión, licencia y el crédito de Rodaje; los dos enlaces abren GitHub en el navegador.
+7. **Ritmo.** ¿Las tres tarjetas (archivo, ajustes, subtítulos) con sombra suave se ven ordenadas o recargadas? Con Tab, ¿se ve el foco en cada control?
