@@ -14,6 +14,6 @@ Herramienta de IA aparte de Rodaje, con interfaz propia. Repositorio público `D
 - Fase 0 cerrada: esqueleto, licencia y `src\Subtitular.slnx`.
 - Fase 1 cerrada: `Subtitular.Core` (decodificar, `Rodaje.Module.Subtitles`, SRT/VTT) y `Subtitular.Cli`; WER 2,13 % (`docs/informe-fase-1.md`).
 - Fase 2 cerrada: ventana WinUI 3 con AOT, traducción y voz en Core y CLI (`docs/informe-fase-2.md`).
-- Fase 3 cerrada: distribución AOT autocontenida (`build\distribuir.ps1`), zip `dist\Subtitular-1.0.0-win-x64.zip` (26,16 MB), instalador Inno Setup `dist\Subtitular-1.0.0-instalador.exe` (16,75 MB), catálogo `dist\catalogo-subtitular.json`, notas desde CHANGELOG, `SHA256SUMS`, `.github/workflows/ci.yml` y `release.yml` (borrador por workflow_dispatch), y 29 pruebas rápidas pasando (incluyendo `SignedIndex`).
+- Fase 3 cerrada y verificada (`docs/informe-fase-3.md`): `build\distribuir.ps1` deja en `dist\` el zip AOT autocontenido (26,2 MB), el instalador Inno Setup por usuario (16,8 MB), `catalogo-subtitular.json` (entrada `app`), `notas-version.md` y `SHA256SUMS`; `ci.yml` y `release.yml` (solo `workflow_dispatch`, `--draft`). Pendiente legal: términos del Windows App SDK (`docs/legal.md`).
 - Submódulo `externo/rodaje` fijado a PR #445 (`0436ad75`, `IndexEntryKind.App`).
 - **Siguiente:** Daniel firma la entrada de catálogo en `Dathinel/rodaje-catalogo` y publica la release de GitHub tras revisar el borrador.

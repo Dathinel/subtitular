@@ -59,6 +59,3 @@ Name: "{autodesktop}\Subtitular"; Filename: "{app}\Subtitular.exe"; Comment: "Su
 
 [Run]
 Filename: "{app}\Subtitular.exe"; Description: "Abrir Subtitular"; Flags: nowait postinstall skipifsilent
-
-[UninstallDelete]
-Type: filesandordirs; Name: "{app}"

@@ -40,9 +40,9 @@ Para empaquetar la distribución:
 powershell -NoProfile -ExecutionPolicy Bypass -File build\distribuir.ps1
 ```
 Genera en `dist\`:
-- `Subtitular-<versión>-win-x64.zip`: autocontenido (App, Cli, licencias, README corto y `herramienta.json`).
-- `Subtitular-<versión>-instalador.exe`: instalador por usuario con Inno Setup (sin permisos de administrador).
-- `SHA256SUMS` / `SHA256SUMS.txt`: huellas de los artefactos.
+- `Subtitular-<versión>-win-x64.zip`: autocontenido (App, Cli, el runtime del Windows App SDK que exige AOT, licencias y README corto). 26,2 MB; el instalador, 16,8 MB; la App pinta su primer cuadro en menos de 300 ms desde una carpeta limpia.
+- `Subtitular-<versión>-instalador.exe`: instalador por usuario con Inno Setup (sin permisos de administrador; se baja a `.entorno` con huella fijada).
+- `SHA256SUMS`: huellas de los artefactos.
 - `notas-version.md`: notas extraídas desde `CHANGELOG.md`.
 - `catalogo-subtitular.json`: entrada `app` para el catálogo firmado de Rodaje.
 
@@ -51,3 +51,5 @@ Genera en `dist\`:
 ## Licencia
 
 GPLv3, solo la versión 3 (`GPL-3.0-only`). Va con GPLv3 porque reutiliza código de Rodaje (el protocolo de módulos, entre otras piezas) y sus módulos de IA, que son GPLv3. Ver [LICENSE](LICENSE) y [LICENCIAS.md](LICENCIAS.md).
+
+Basado en el editor de video de código abierto de Dathinel / [Rodaje](https://github.com/Dathinel/rodaje).

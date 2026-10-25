@@ -1,4 +1,4 @@
-# Comprueba que el JSON de catálogo tiene la huella real del zip y los campos que SignedIndex exige.
+﻿# Comprueba que el JSON de catálogo tiene la huella real del zip y los campos que SignedIndex exige.
 param(
     [string]$CatalogoJson = '',
     [string]$Zip = ''

@@ -1,4 +1,4 @@
-# Prueba que el zip descomprimido en una carpeta limpia arranca la App y la Cli (--help)
+﻿# Prueba que el zip descomprimido en una carpeta limpia arranca la App y la Cli (--help)
 param(
     [string]$Zip = ''
 )

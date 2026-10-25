@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -5,6 +7,7 @@ using Rodaje.Packages.Download;
 
 namespace Subtitular.Tests;
 
+/// <summary>Corre <c>build\catalogo-entrada.ps1</c> sobre un zip de prueba: la huella y el tamaño deben ser los reales y la entrada debe pasar por <see cref="SignedIndex"/>.</summary>
 public sealed class CatalogoEntradaTests
 {
     private static string FindRepoRoot()
@@ -20,82 +23,63 @@ public sealed class CatalogoEntradaTests
     }
 
     [Fact]
-    public void Catalogo_entrada_cumple_requisitos_de_SignedIndex_y_coincide_con_zip()
+    public void Catalogo_entrada_tiene_la_huella_real_del_zip_y_pasa_por_SignedIndex()
     {
         string root = FindRepoRoot();
-        string catalogoJsonPath = Path.Combine(root, "dist", "catalogo-subtitular.json");
-        string zipPath = Path.Combine(root, "dist", "Subtitular-1.0.0-win-x64.zip");
-
-        Assert.True(File.Exists(catalogoJsonPath), $"Falta {catalogoJsonPath}; corre build\\distribuir.ps1 antes.");
-        Assert.True(File.Exists(zipPath), $"Falta {zipPath}; corre build\\distribuir.ps1 antes.");
-
-        byte[] zipBytes = File.ReadAllBytes(zipPath);
-        string expectedSha256 = Convert.ToHexStringLower(SHA256.HashData(zipBytes));
-        long expectedSize = new FileInfo(zipPath).Length;
-
-        string jsonContent = File.ReadAllText(catalogoJsonPath, Encoding.UTF8);
-        using JsonDocument doc = JsonDocument.Parse(jsonContent);
-        JsonElement rootEl = doc.RootElement;
-
-        // Comprobar campos exigidos por SignedIndex
-        Assert.True(rootEl.TryGetProperty("id", out JsonElement idProp));
-        Assert.Equal("subtitular", idProp.GetString());
-
-        Assert.True(rootEl.TryGetProperty("version", out JsonElement versionProp));
-        Assert.Equal("1.0.0", versionProp.GetString());
-
-        Assert.True(rootEl.TryGetProperty("kind", out JsonElement kindProp));
-        Assert.Equal("app", kindProp.GetString());
-
-        Assert.True(rootEl.TryGetProperty("url", out JsonElement urlProp));
-        string url = urlProp.GetString()!;
-        Assert.Equal("https://github.com/Dathinel/subtitular/releases/download/v1.0.0/Subtitular-1.0.0-win-x64.zip", url);
-
-        Assert.True(rootEl.TryGetProperty("sha256", out JsonElement shaProp));
-        string sha256 = shaProp.GetString()!;
-        Assert.Equal(expectedSha256, sha256);
-
-        Assert.True(rootEl.TryGetProperty("size", out JsonElement sizeProp));
-        long size = sizeProp.GetInt64();
-        Assert.Equal(expectedSize, size);
-
-        // Comprobar módulos declarados
-        Assert.True(rootEl.TryGetProperty("modulos", out JsonElement modulosProp));
-        Assert.Equal(JsonValueKind.Array, modulosProp.ValueKind);
-        List<string> modulos = [.. modulosProp.EnumerateArray().Select(e => e.GetString()!)];
-        Assert.Contains("modulo-subtitulos", modulos);
-        Assert.Contains("modulo-traducir", modulos);
-        Assert.Contains("modulo-voz", modulos);
-
-        // Verificar parseo y validación de SignedIndex
-        using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        string pubBase64 = Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
-        using ECDsa pub = IndexSignature.TryImportPublicKey(pubBase64)!;
-
-        string indexJson = $$"""
+        string temp = Directory.CreateTempSubdirectory("subtitular-catalogo-").FullName;
+        try
         {
-          "formatVersion": 1,
-          "generated": "2026-10-24T12:00:00Z",
-          "entries": [
-            {{jsonContent}}
-          ]
+            string zipPath = Path.Combine(temp, "Subtitular-9.9.9-win-x64.zip");
+            using (ZipArchive zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+            using (Stream contenido = zip.CreateEntry("README.txt").Open())
+            {
+                contenido.Write("prueba"u8);
+            }
+            string jsonPath = Path.Combine(temp, "catalogo.json");
+
+            var psi = new ProcessStartInfo("powershell") { RedirectStandardOutput = true, RedirectStandardError = true };
+            psi.ArgumentList.Add("-NoProfile");
+            psi.ArgumentList.Add("-ExecutionPolicy");
+            psi.ArgumentList.Add("Bypass");
+            psi.ArgumentList.Add("-File");
+            psi.ArgumentList.Add(Path.Combine(root, "build", "catalogo-entrada.ps1"));
+            psi.ArgumentList.Add("-Version");
+            psi.ArgumentList.Add("9.9.9");
+            psi.ArgumentList.Add("-Zip");
+            psi.ArgumentList.Add(zipPath);
+            psi.ArgumentList.Add("-Salida");
+            psi.ArgumentList.Add(jsonPath);
+            using Process proceso = Process.Start(psi)!;
+            string salida = proceso.StandardOutput.ReadToEnd() + proceso.StandardError.ReadToEnd();
+            proceso.WaitForExit();
+            Assert.True(proceso.ExitCode == 0, salida);
+
+            string expectedSha256 = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(zipPath)));
+            long expectedSize = new FileInfo(zipPath).Length;
+            string jsonContent = File.ReadAllText(jsonPath, Encoding.UTF8);
+            using JsonDocument doc = JsonDocument.Parse(jsonContent);
+            List<string> modulos = [.. doc.RootElement.GetProperty("modulos").EnumerateArray().Select(e => e.GetString()!)];
+            Assert.Equal(["modulo-subtitulos", "modulo-traducir", "modulo-voz"], modulos);
+
+            // La entrada debe entrar tal cual en el índice firmado que leen Rodaje y el Lanzador.
+            using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            using ECDsa pub = IndexSignature.TryImportPublicKey(Convert.ToBase64String(key.ExportSubjectPublicKeyInfo()))!;
+            byte[] indexBytes = Encoding.UTF8.GetBytes($$"""{ "formatVersion": 1, "generated": "2026-10-24T12:00:00Z", "entries": [ {{jsonContent}} ] }""");
+            var problems = new List<string>();
+            SignedIndex index = SignedIndex.Load(indexBytes, IndexSignature.Sign(indexBytes, key), pub, DownloadUrlPolicy.Default, problems);
+
+            Assert.Empty(problems);
+            IndexEntry entry = Assert.Single(index.Entries);
+            Assert.Equal("subtitular", entry.Id);
+            Assert.Equal(IndexEntryKind.App, entry.Kind);
+            Assert.Equal("9.9.9", entry.Version.ToString());
+            Assert.Equal(expectedSha256, entry.Sha256);
+            Assert.Equal(expectedSize, entry.Size);
+            Assert.Equal(new Uri("https://github.com/Dathinel/subtitular/releases/download/v9.9.9/Subtitular-9.9.9-win-x64.zip"), entry.Url);
         }
-        """;
-
-        byte[] indexBytes = Encoding.UTF8.GetBytes(indexJson);
-        byte[] signature = IndexSignature.Sign(indexBytes, key);
-
-        var problems = new List<string>();
-        SignedIndex index = SignedIndex.Load(indexBytes, signature, pub, DownloadUrlPolicy.Default, problems);
-
-        Assert.Empty(problems);
-        Assert.Single(index.Entries);
-
-        IndexEntry entry = index.Entries[0];
-        Assert.Equal("subtitular", entry.Id);
-        Assert.Equal(IndexEntryKind.App, entry.Kind);
-        Assert.Equal(expectedSha256, entry.Sha256);
-        Assert.Equal(expectedSize, entry.Size);
-        Assert.Equal(new Uri(url), entry.Url);
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
     }
 }

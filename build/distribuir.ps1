@@ -1,4 +1,4 @@
-# Distribución de Subtitular (publicación AOT, zip, catálogo, notas e instalador).
+﻿# Distribución de Subtitular (publicación AOT, zip, catálogo, notas e instalador).
 # Uso:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File build\distribuir.ps1 [-Version 1.0.0] [-Salida dist] [-SinPublicar] [-SinInstalador]
 [CmdletBinding()]
@@ -36,19 +36,8 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host " Distribución de Subtitular $Version" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
-# Entorno: si no está definido RODAJE_ENTORNO, usar el de Rodaje si existe
-if (-not $env:RODAJE_ENTORNO) {
-    $candidatos = @(
-        'D:\Programas de uso libre\Rodaje\.entorno',
-        (Join-Path $Raiz '.entorno')
-    )
-    foreach ($c in $candidatos) {
-        if (Test-Path -LiteralPath $c) {
-            $env:RODAJE_ENTORNO = $c
-            break
-        }
-    }
-}
+# Entorno propio (SDK, Inno Setup): el mismo que build\dotnet.cmd si no viene RODAJE_ENTORNO.
+if (-not $env:RODAJE_ENTORNO) { $env:RODAJE_ENTORNO = Join-Path $Raiz '.entorno' }
 
 # 1. Compilación y publicación Native AOT (App y Cli)
 if (-not $SinPublicar) {
@@ -80,11 +69,13 @@ Subtitular $Version
 
 Subtítulos automáticos para Windows, en tu PC y sin conexión.
 
+Basado en el editor de video de código abierto de Dathinel / Rodaje (https://github.com/Dathinel/rodaje),
+un proyecto libre y gratuito.
+
 Contenido de esta distribución:
 - Subtitular.exe: Aplicación gráfica en WinUI 3 (haz doble clic para iniciar).
 - Subtitular.Cli.exe: Herramienta de línea de comandos para scripts y automatización.
 - LICENSE / LICENCIAS.md: Licencia GPL-3.0-only y avisos de componentes de terceros.
-- herramienta.json: Declaración de módulos de IA requeridos para el Lanzador.
 
 Uso rápido (App):
 1. Ejecuta Subtitular.exe.
@@ -110,13 +101,8 @@ Repositorio: https://github.com/Dathinel/subtitular
 "@
 [System.IO.File]::WriteAllText((Join-Path $CarpetaApp 'README.txt'), $readmeUso, (New-Object System.Text.UTF8Encoding($false)))
 
-$manifiesto = [ordered]@{
-    modulos = @('modulo-subtitulos', 'modulo-traducir', 'modulo-voz')
-}
-[System.IO.File]::WriteAllText((Join-Path $CarpetaApp 'herramienta.json'), ($manifiesto | ConvertTo-Json), (New-Object System.Text.UTF8Encoding($false)))
-
-# Limpieza de símbolos .pdb si quedaron
-Get-ChildItem -LiteralPath $CarpetaApp -Filter '*.pdb' -Recurse | Remove-Item -Force
+# Fuera símbolos y documentación XML de los proyectos referenciados: no hacen falta para ejecutar.
+Get-ChildItem -LiteralPath $CarpetaApp -Recurse -File | Where-Object { $_.Extension -in '.pdb', '.xml' } | Remove-Item -Force
 
 # 3. Empaquetar zip autocontenido
 Write-Host "`n[3/5] Creando zip autocontenido..." -ForegroundColor Yellow
@@ -169,11 +155,11 @@ if (Test-Path -LiteralPath $changelogPath) {
 if (-not $notasTexto) {
     $notasTexto = "# Subtitular $Version`n`nLanzamiento inicial de Subtitular $Version."
 }
+# Término 2 de la licencia de Rodaje: aviso prominente en la descripción de la release (release.yml usa estas notas).
+$notasTexto = "**Basado en el editor de video de código abierto de Dathinel / Rodaje (https://github.com/Dathinel/rodaje)**, un proyecto libre y gratuito.`n`n$notasTexto"
 
 $notasSalida = Join-Path $Salida 'notas-version.md'
-$notasVersionSalida = Join-Path $Salida "Subtitular-$Version-notas.md"
 [System.IO.File]::WriteAllText($notasSalida, $notasTexto, (New-Object System.Text.UTF8Encoding($false)))
-[System.IO.File]::WriteAllText($notasVersionSalida, $notasTexto, (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "  Notas de versión: $notasSalida" -ForegroundColor Green
 
 # Generar entrada de catálogo llamando a catalogo-entrada.ps1
@@ -183,50 +169,33 @@ if ($LASTEXITCODE -ne 0) {
     throw "Falló la generación de catalogo-subtitular.json."
 }
 
-# 5. Instalador opcional con Inno Setup
+# 5. Instalador con Inno Setup portable en RODAJE_ENTORNO; si falta se baja con SHA-256 fijada (misma versión y
+#    huella que build\instalador.ps1 de Rodaje), así release.yml también lo arma en GitHub Actions.
 $instaladorSalida = Join-Path $Salida "Subtitular-$Version-instalador.exe"
 if (-not $SinInstalador) {
     Write-Host "`n[5/5] Compilando instalador Inno Setup..." -ForegroundColor Yellow
-    $iscc = $null
-    $candidatosIscc = @()
-    if ($env:RODAJE_ENTORNO) {
-        $candidatosIscc += Join-Path $env:RODAJE_ENTORNO 'innosetup-7.1.0\ISCC.exe'
-    }
-    $candidatosIscc += 'D:\Programas de uso libre\Rodaje\.entorno\innosetup-7.1.0\ISCC.exe'
-
-    foreach ($c in $candidatosIscc) {
-        if (Test-Path -LiteralPath $c) {
-            $iscc = $c
-            break
+    $innoVersion = '7.1.0'
+    $inno = Join-Path $env:RODAJE_ENTORNO "innosetup-$innoVersion"
+    $iscc = Join-Path $inno 'ISCC.exe'
+    if (-not (Test-Path -LiteralPath $iscc)) {
+        Write-Host "  Bajando Inno Setup $innoVersion a $inno..."
+        $bajado = Join-Path ([System.IO.Path]::GetTempPath()) "innosetup-$innoVersion-x64.exe"
+        Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/is-$($innoVersion -replace '\.', '_')/innosetup-$innoVersion-x64.exe" -OutFile $bajado -UseBasicParsing
+        $sha = (Get-FileHash -LiteralPath $bajado -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($sha -ne '0362a383ed217d4c4239b5933866dd96d3eb2102737da92f80f6057a4b40df2f') {
+            Remove-Item -LiteralPath $bajado -Force
+            throw "Inno Setup bajado no coincide con su SHA-256 ($sha)."
         }
+        $p = Start-Process -FilePath $bajado -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', '/PORTABLE=1', '/NOICONS', "/DIR=`"$inno`"" -PassThru -Wait
+        Remove-Item -LiteralPath $bajado -Force
+        if ($p.ExitCode -ne 0 -or -not (Test-Path -LiteralPath $iscc)) { throw "No se pudo desempacar Inno Setup (código $($p.ExitCode))." }
     }
 
-    if (-not $iscc) {
-        $cmdIscc = Get-Command 'ISCC.exe' -ErrorAction SilentlyContinue
-        if ($cmdIscc) { $iscc = $cmdIscc.Source }
+    & $iscc '/Q' "/DVersion=$Version" "/DOrigen=$CarpetaApp" "/DLicencia=$(Join-Path $Raiz 'LICENSE')" "/O$Salida" (Join-Path $PSScriptRoot 'instalador\Subtitular.iss')
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $instaladorSalida)) {
+        throw "ISCC terminó con código $LASTEXITCODE; no se creó el instalador."
     }
-
-    if ($iscc) {
-        $issScript = Join-Path $PSScriptRoot 'instalador\Subtitular.iss'
-        $licenciaPath = Join-Path $Raiz 'LICENSE'
-        $argumentosIscc = @(
-            '/Q',
-            "/DVersion=$Version",
-            "/DOrigen=$CarpetaApp",
-            "/DLicencia=$licenciaPath",
-            "/O$Salida",
-            $issScript
-        )
-        & $iscc @argumentosIscc
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $instaladorSalida)) {
-            Write-Warning "ISCC terminó con código $LASTEXITCODE; no se pudo crear el instalador."
-        } else {
-            $tamInst = (Get-Item -LiteralPath $instaladorSalida).Length
-            Write-Host "  Instalador creado: $instaladorSalida ($([math]::Round($tamInst / 1MB, 2)) MB)" -ForegroundColor Green
-        }
-    } else {
-        Write-Warning "No se encontró ISCC.exe (Inno Setup). Se omite la creación del instalador."
-    }
+    Write-Host "  Instalador creado: $instaladorSalida ($([math]::Round((Get-Item -LiteralPath $instaladorSalida).Length / 1MB, 2)) MB)" -ForegroundColor Green
 } else {
     Write-Host "`n[5/5] Instalador omitido (-SinInstalador)." -ForegroundColor Gray
 }
@@ -244,9 +213,7 @@ $sumsLineas = @($artefactos | ForEach-Object {
 })
 
 $sumsSalida = Join-Path $Salida 'SHA256SUMS'
-$sumsTxtSalida = Join-Path $Salida 'SHA256SUMS.txt'
 [System.IO.File]::WriteAllLines($sumsSalida, [string[]]$sumsLineas, (New-Object System.Text.UTF8Encoding($false)))
-[System.IO.File]::WriteAllLines($sumsTxtSalida, [string[]]$sumsLineas, (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "`n========================================" -ForegroundColor Green
 Write-Host " Distribución completada con éxito" -ForegroundColor Green

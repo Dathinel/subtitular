@@ -1,4 +1,4 @@
-# Genera el JSON de la entrada «app» para el catálogo firmado de Rodaje.
+﻿# Genera el JSON de la entrada «app» para el catálogo firmado de Rodaje.
 # Deja el JSON en dist\catalogo-subtitular.json (sin firmar).
 # Uso:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File build\catalogo-entrada.ps1 [-Version 1.0.0] [-Zip dist\Subtitular-1.0.0-win-x64.zip] [-Salida dist\catalogo-subtitular.json]
