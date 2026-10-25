@@ -29,7 +29,7 @@ build\dotnet.cmd build src\Subtitular.slnx
 build\publicar.cmd
 ```
 
-`build\publicar.cmd` deja la ventana y la CLI publicadas con Native AOT en `dist\Subtitular\`. Los módulos de IA (`Rodaje.Module.Subtitles.exe`, `.Translate.exe`, `.Voice.exe`) se buscan en `SUBTITULAR_MODULOS`, junto al exe (`modulos\`) o donde los instala Rodaje (`%LOCALAPPDATA%\Rodaje\complementos\modulos\modulo-*`).
+`build\publicar.cmd` deja la ventana y la CLI publicadas con Native AOT en `dist\Subtitular\`. Los módulos de IA (`Rodaje.Module.Subtitles.exe`, `.Translate.exe`, `.Voice.exe`) se buscan en `SUBTITULAR_MODULOS`, donde los instala el Lanzador (`%LOCALAPPDATA%\Dathinel\Comun\modulos\modulo-*\<versión>`), donde los instala Rodaje (`%LOCALAPPDATA%\Rodaje\complementos\modulos\modulo-*`) o junto al exe (`modulos\`).
 
 El SDK de .NET y FFmpeg se instalan en `.entorno\` con huella fijada, sin tocar nada global. Los scripts son los de Rodaje (submódulo `externo/rodaje`, fijado a un commit). Para no bajar el SDK otra vez se puede apuntar `RODAJE_ENTORNO` al `.entorno` de Rodaje.
 

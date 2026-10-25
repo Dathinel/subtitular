@@ -8,10 +8,16 @@ namespace Subtitular.Core;
 public static class Modules
 {
     /// <summary>
-    /// Busca <paramref name="exe"/>: ruta dada, <c>SUBTITULAR_MODULOS</c>, la variable propia del módulo, junto a la app
-    /// (<c>modulos\</c>), los complementos de Rodaje en LocalAppData y, al correr desde el repositorio, su <c>bin</c>.
+    /// Busca <paramref name="exe"/> en este orden: ruta dada, <c>SUBTITULAR_MODULOS</c>, la variable propia del módulo,
+    /// la carpeta del Lanzador (<c>%LOCALAPPDATA%\Dathinel\Comun\modulos\modulo-*\&lt;versión&gt;</c>, la más nueva),
+    /// los complementos de Rodaje (<c>%LOCALAPPDATA%\Rodaje\complementos\modulos</c>, <c>RODAJE_MODULOS</c>),
+    /// <c>modulos\</c> junto a la app y, al correr desde el repositorio, su <c>bin</c>.
     /// </summary>
-    public static string Find(string exe, string folder, string? customPath, string envVar, string nombre)
+    public static string Find(string exe, string folder, string? customPath, string envVar, string nombre) =>
+        Find(exe, folder, customPath, envVar, nombre, Environment.GetEnvironmentVariable,
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppContext.BaseDirectory);
+
+    internal static string Find(string exe, string folder, string? customPath, string envVar, string nombre, Func<string, string?> env, string localAppData, string app)
     {
         if (!string.IsNullOrWhiteSpace(customPath))
         {
@@ -27,45 +33,71 @@ public static class Modules
             throw new SubtitularUserException($"No se encontró el módulo de {nombre} en: {customPath}");
         }
 
-        List<string> candidates = [];
-        if (Environment.GetEnvironmentVariable("SUBTITULAR_MODULOS") is { Length: > 0 } env)
+        List<string> roots = [];
+        if (env("SUBTITULAR_MODULOS") is { Length: > 0 } propia)
         {
-            candidates.Add(env);
-            candidates.Add(Path.Combine(env, exe));
-            candidates.Add(Path.Combine(env, folder, exe));
-            candidates.Add(Path.Combine(env, "modulo-" + folder, exe));
+            roots.Add(propia);
         }
-        if (Environment.GetEnvironmentVariable(envVar) is { Length: > 0 } own)
+        if (env(envVar) is { Length: > 0 } own)
         {
-            candidates.Add(own);
+            roots.Add(own);
         }
-        string app = AppContext.BaseDirectory;
-        candidates.Add(Path.Combine(app, exe));
-        candidates.Add(Path.Combine(app, "modulos", exe));
-        candidates.Add(Path.Combine(app, "modulos", folder, exe));
-        candidates.Add(Path.Combine(app, "modulos", "modulo-" + folder, exe));
-        string rodaje = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Rodaje", "complementos", "modulos");
-        candidates.Add(Path.Combine(rodaje, "modulo-" + folder, exe));
-        candidates.Add(Path.Combine(rodaje, folder, exe));
+        roots.Add(Path.Combine(localAppData, "Dathinel", "Comun", "modulos"));
+        roots.Add(Path.Combine(localAppData, "Rodaje", "complementos", "modulos"));
+        if (env("RODAJE_MODULOS") is { Length: > 0 } rodaje)
+        {
+            roots.Add(rodaje);
+        }
+        roots.Add(Path.Combine(app, "modulos"));
+        roots.Add(app);
+
+        IEnumerable<string> candidates = roots.SelectMany(r => InRoot(r, exe, folder));
         string project = Path.GetFileNameWithoutExtension(exe);
         for (DirectoryInfo? dir = new(app); dir is not null; dir = dir.Parent)
         {
             foreach (string root in new[] { Path.Combine(dir.FullName, "externo", "rodaje", "modules", project), Path.Combine(dir.FullName, "modules", project) })
             {
-                candidates.Add(Path.Combine(root, "bin", "Release", "net10.0-windows", "win-x64", "publish", exe));
-                candidates.Add(Path.Combine(root, "bin", "Release", "net10.0-windows", "win-x64", "native", exe));
-                candidates.Add(Path.Combine(root, "bin", "Release", "net10.0-windows", "win-x64", exe));
-                candidates.Add(Path.Combine(root, "bin", "Debug", "net10.0-windows", "win-x64", exe));
-                candidates.Add(Path.Combine(root, "bin", "Release", "net10.0-windows", exe));
-                candidates.Add(Path.Combine(root, "bin", "Debug", "net10.0-windows", exe));
+                candidates = candidates.Concat(
+                [
+                    Path.Combine(root, "bin", "Release", "net10.0-windows", "win-x64", "publish", exe),
+                    Path.Combine(root, "bin", "Release", "net10.0-windows", "win-x64", "native", exe),
+                    Path.Combine(root, "bin", "Release", "net10.0-windows", "win-x64", exe),
+                    Path.Combine(root, "bin", "Debug", "net10.0-windows", "win-x64", exe),
+                    Path.Combine(root, "bin", "Release", "net10.0-windows", exe),
+                    Path.Combine(root, "bin", "Debug", "net10.0-windows", exe),
+                ]);
             }
         }
 
-        string? found = candidates.FirstOrDefault(c => File.Exists(c) && string.Equals(Path.GetFileName(c), exe, StringComparison.OrdinalIgnoreCase));
+        string? found = candidates.FirstOrDefault(c => string.Equals(Path.GetFileName(c), exe, StringComparison.OrdinalIgnoreCase) && File.Exists(c));
         return found is not null
             ? Path.GetFullPath(found)
             : throw new SubtitularUserException(
-                $"No se encontró el módulo de {nombre} ({exe}). Se buscó en {rodaje}. Pasa --modulo <ruta> o define la variable SUBTITULAR_MODULOS.");
+                $"No se encontró el módulo de {nombre} ({exe}). Se buscó en: {string.Join("; ", roots.Distinct())}. Pasa --modulo <ruta> o define la variable SUBTITULAR_MODULOS.");
+    }
+
+    // Una raíz puede ser el exe, su carpeta o una carpeta de módulos: <raíz>\modulo-x\<exe> (Rodaje) o
+    // <raíz>\modulo-x\<versión>\<exe> (Lanzador), probando la versión más nueva primero.
+    private static IEnumerable<string> InRoot(string root, string exe, string folder)
+    {
+        yield return root;
+        yield return Path.Combine(root, exe);
+        yield return Path.Combine(root, folder, exe);
+        string modulo = Path.Combine(root, "modulo-" + folder);
+        yield return Path.Combine(modulo, exe);
+        if (!Directory.Exists(modulo))
+        {
+            yield break;
+        }
+        IEnumerable<string> versions = Directory.EnumerateDirectories(modulo)
+            .Select(d => (Dir: d, Version: Version.TryParse(Path.GetFileName(d), out Version? v) ? v : null))
+            .Where(t => t.Version is not null)
+            .OrderByDescending(t => t.Version)
+            .Select(t => t.Dir);
+        foreach (string dir in versions)
+        {
+            yield return Path.Combine(dir, exe);
+        }
     }
 
     /// <summary>Arranca el módulo; los fallos de arranque salen como <see cref="ModuleException"/> con la ruta.</summary>

@@ -14,3 +14,4 @@
 - **Subtitular.Cli**: herramienta de línea de comandos para automatización y scripts (`--idioma`, `--formato`, `--traducir`, `--voz`, `--salida`).
 - **Subtitular.Core**: biblioteca base con extracción de audio por FFmpeg (LGPL) y conexión por tubería con nombre a los módulos de Rodaje (`modulo-subtitulos`, `modulo-traducir`, `modulo-voz`).
 - **Distribución**: paquete zip autocontenido AOT win-x64, entrada de catálogo firmado e instalador Inno Setup por usuario.
+- **Módulos compartidos**: se localizan donde los instala el Lanzador (`%LOCALAPPDATA%\Dathinel\Comun\modulos`, versión más nueva), donde los instala Rodaje, en `SUBTITULAR_MODULOS` o junto al exe; si faltan, el error lista las rutas probadas.

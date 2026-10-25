@@ -93,8 +93,9 @@ Subtitular requiere los módulos de IA:
 - modulo-subtitulos (Whisper)
 - modulo-traducir (Qwen3)
 - modulo-voz (Kokoro)
-Se buscan en la carpeta de la app, en la variable SUBTITULAR_MODULOS o en
-%LOCALAPPDATA%\Rodaje\complementos\modulos\modulo-*.
+Se buscan en la variable SUBTITULAR_MODULOS, donde los instala el Lanzador
+(%LOCALAPPDATA%\Dathinel\Comun\modulos\modulo-*\<versión>), donde los instala Rodaje
+(%LOCALAPPDATA%\Rodaje\complementos\modulos\modulo-*) y en modulos\ junto a la app.
 
 Licencia: GNU GPL versión 3 (GPL-3.0-only).
 Repositorio: https://github.com/Dathinel/subtitular
