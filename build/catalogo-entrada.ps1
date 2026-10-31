@@ -40,7 +40,18 @@ if (-not (Test-Path -LiteralPath $Zip)) {
     throw "No se encontró el archivo zip de distribución: $Zip (corre antes build\distribuir.ps1)."
 }
 
-$sha256 = (Get-FileHash -LiteralPath $Zip -Algorithm SHA256).Hash.ToLowerInvariant()
+# Huella con las clases de .NET y no con Get-FileHash: en Windows PowerShell 5.1 es una función de script de
+# Microsoft.PowerShell.Utility que solo existe si PSModulePath apunta a $PSHOME\Modules, y un proceso lanzado
+# desde pwsh o desde el host de pruebas puede heredar otro PSModulePath (la CI de main fallaba por eso).
+$hasher = [System.Security.Cryptography.SHA256]::Create()
+$flujo = [System.IO.File]::OpenRead($Zip)
+try {
+    $sha256 = [System.BitConverter]::ToString($hasher.ComputeHash($flujo)).Replace('-', '').ToLowerInvariant()
+}
+finally {
+    $flujo.Dispose()
+    $hasher.Dispose()
+}
 $size = (Get-Item -LiteralPath $Zip).Length
 $url = "https://github.com/Dathinel/subtitular/releases/download/v$Version/Subtitular-$Version-win-x64.zip"
 
