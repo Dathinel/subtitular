@@ -2,26 +2,21 @@ using System.Text.Json;
 
 namespace Subtitular.Core;
 
-/// <summary>Lo último que eligió el usuario en la ventana; se guarda en %LOCALAPPDATA%\Dathinel\Subtitular\preferencias.json.</summary>
-public sealed record Preferences
+/// <summary>
+/// Lo último que eligió el usuario en la ventana; se guarda en %LOCALAPPDATA%\Dathinel\Subtitular\preferencias.json.
+/// <c>LastInputDir</c> es la carpeta del último archivo elegido (el diálogo «Elegir…» vuelve a abrirse ahí); <c>OutputDir</c> nula = junto al video;
+/// <c>OpenFolder</c> abre el Explorador con el resultado al guardar. Constructor primario con valores por omisión: una propiedad
+/// que falte en un archivo viejo toma el suyo al deserializar.
+/// </summary>
+public sealed record Preferences(
+    string? LastInputDir = null,
+    string? OutputDir = null,
+    string Language = "auto",
+    string Format = "srt",
+    string? TranslateTo = null,
+    bool Speak = false,
+    bool OpenFolder = true)
 {
-    /// <summary>Carpeta del último archivo elegido: el diálogo «Elegir…» vuelve a abrirse ahí.</summary>
-    public string? LastInputDir { get; init; }
-
-    /// <summary>Carpeta de salida elegida; nula = junto al video.</summary>
-    public string? OutputDir { get; init; }
-
-    public string Language { get; init; } = "auto";
-
-    public string Format { get; init; } = "srt";
-
-    public string? TranslateTo { get; init; }
-
-    public bool Speak { get; init; }
-
-    /// <summary>Abrir la carpeta del resultado en el Explorador al terminar de guardar.</summary>
-    public bool OpenFolder { get; init; } = true;
-
     public static string DefaultPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Dathinel", "Subtitular", "preferencias.json");
 
