@@ -1,4 +1,5 @@
 // Copiado de Rastrear (src/Rastrear.App/FileDialogs.cs), sin SaveSingle: candidato a biblioteca compartida (Herramientas-IA\PLAN.md, «Cómo se comparte el código con Rodaje»).
+// Añadido aquí: varios archivos a la vez (OpenMany) y carpeta inicial (la última elegida).
 using System.Runtime.InteropServices;
 using TerraFX.Interop.Windows;
 using static TerraFX.Interop.Windows.Windows;
@@ -14,6 +15,7 @@ internal static unsafe class FileDialogs
     private const uint FosNoChangeDir = 0x8;
     private const uint FosPickFolders = 0x20;
     private const uint FosForceFileSystem = 0x40;
+    private const uint FosAllowMultiSelect = 0x200;
     private const uint FosPathMustExist = 0x800;
     private const uint FosFileMustExist = 0x1000;
 
@@ -23,45 +25,72 @@ internal static unsafe class FileDialogs
     public static readonly (string Name, string Spec) AllFilter =
         ("Todos los archivos", "*.*");
 
-    public static string? OpenSingle(nint owner, string title, params (string Name, string Spec)[] filters)
+    public static string? OpenSingle(nint owner, string title, params (string Name, string Spec)[] filters) =>
+        OpenMany(owner, title, null, false, filters).FirstOrDefault();
+
+    /// <summary>Uno o varios archivos (Ctrl o Mayús en el diálogo); vacío si se cancela. Empieza en <paramref name="initialDir"/> si existe.</summary>
+    public static IReadOnlyList<string> OpenMany(nint owner, string title, string? initialDir, bool multi, params (string Name, string Spec)[] filters)
     {
         IFileOpenDialog* dialog = null;
-        IShellItem* item = null;
+        IShellItemArray* items = null;
         try
         {
             if (CoCreateInstance(__uuidof<FileOpenDialog>(), null, (uint)CLSCTX.CLSCTX_INPROC_SERVER,
                 __uuidof<IFileOpenDialog>(), (void**)&dialog).FAILED)
             {
-                return null;
+                return [];
             }
 
             uint options;
             dialog->GetOptions(&options);
             options |= FosForceFileSystem | FosFileMustExist | FosPathMustExist | FosNoChangeDir;
+            if (multi)
+            {
+                options |= FosAllowMultiSelect;
+            }
             dialog->SetOptions(options);
 
             Configure((IFileDialog*)dialog, title, filters);
+            SetFolder((IFileDialog*)dialog, initialDir);
 
             if (dialog->Show((HWND)owner).FAILED)
             {
-                return null;
+                return [];
             }
 
-            if (dialog->GetResult(&item).FAILED)
+            if (dialog->GetResults(&items).FAILED || items == null)
             {
-                return null;
+                return [];
             }
 
-            return PathOf(item);
+            uint count;
+            items->GetCount(&count);
+            List<string> paths = new((int)count);
+            for (uint i = 0; i < count; i++)
+            {
+                IShellItem* item = null;
+                try
+                {
+                    if (items->GetItemAt(i, &item).SUCCEEDED && PathOf(item) is { } path)
+                    {
+                        paths.Add(path);
+                    }
+                }
+                finally
+                {
+                    if (item != null) item->Release();
+                }
+            }
+            return paths;
         }
         finally
         {
-            if (item != null) item->Release();
+            if (items != null) items->Release();
             if (dialog != null) dialog->Release();
         }
     }
 
-    public static string? ChooseFolder(nint owner, string title)
+    public static string? ChooseFolder(nint owner, string title, string? initialDir = null)
     {
         IFileOpenDialog* dialog = null;
         IShellItem* item = null;
@@ -82,6 +111,7 @@ internal static unsafe class FileDialogs
             {
                 dialog->SetTitle(pTitle);
             }
+            SetFolder((IFileDialog*)dialog, initialDir);
 
             if (dialog->Show((HWND)owner).FAILED)
             {
@@ -99,6 +129,30 @@ internal static unsafe class FileDialogs
         {
             if (item != null) item->Release();
             if (dialog != null) dialog->Release();
+        }
+    }
+
+    /// <summary>Carpeta por la que empieza el diálogo; si no existe o falla, Windows pone la de siempre.</summary>
+    private static void SetFolder(IFileDialog* dialog, string? dir)
+    {
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        {
+            return;
+        }
+        IShellItem* folder = null;
+        try
+        {
+            fixed (char* pDir = dir)
+            {
+                if (SHCreateItemFromParsingName(pDir, null, __uuidof<IShellItem>(), (void**)&folder).SUCCEEDED && folder != null)
+                {
+                    dialog->SetFolder(folder);
+                }
+            }
+        }
+        finally
+        {
+            if (folder != null) folder->Release();
         }
     }
 

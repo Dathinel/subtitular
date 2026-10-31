@@ -73,10 +73,14 @@
         <!-- Archivo: zona para soltar. -->
         <Border Grid.Row="1" Style="{StaticResource Tarjeta}" Translation="0,0,8" BorderBrush="{ThemeResource AcentoBrush}" Background="{ThemeResource AcentoSuaveBrush}">
             <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
-                <Button Content="Elegir…" Click="OnChoose" />
+                <Button Content="Elegir…" Click="OnChoose" ToolTipService.ToolTip="Elegir uno o varios archivos (Ctrl+O)">
+                    <Button.KeyboardAccelerators>
+                        <KeyboardAccelerator Modifiers="Control" Key="O" />
+                    </Button.KeyboardAccelerators>
+                </Button>
                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="FileName" Text="Suelta aquí un video o un audio" Style="{ThemeResource BodyStrongTextBlockStyle}" />
-                    <TextBlock x:Name="FileInfo" Text="mp4, mkv, mov, mp3, wav y más; o pulsa Elegir…" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="FileName" Text="Suelta aquí uno o varios videos o audios" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Name="FileInfo" Text="mp4, mkv, mov, mp3, wav y más; o pulsa Elegir… (Ctrl+O)" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -98,10 +102,12 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBox x:Name="OutputDirBox" Header="Carpeta de salida" PlaceholderText="Junto al video" />
                     <Button Grid.Column="1" Content="Carpeta…" Click="OnChooseFolder" VerticalAlignment="Bottom" />
                     <CheckBox x:Name="SpeakBox" Grid.Column="2" Content="Leer en voz alta (WAV junto al video)" Margin="16,0,0,0" VerticalAlignment="Bottom" />
+                    <CheckBox x:Name="OpenFolderBox" Grid.Column="3" Content="Abrir la carpeta al terminar" Margin="16,0,0,0" VerticalAlignment="Bottom" IsChecked="True" />
                 </Grid>
             </StackPanel>
         </Border>
@@ -114,7 +120,12 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button x:Name="RunButton" Content="Generar subtítulos" Style="{ThemeResource AccentButtonStyle}" Click="OnRun" IsEnabled="False" />
+            <Button x:Name="RunButton" Content="Generar subtítulos" Style="{ThemeResource AccentButtonStyle}" Click="OnRun" IsEnabled="False"
+                    ToolTipService.ToolTip="Ctrl+Entrar">
+                <Button.KeyboardAccelerators>
+                    <KeyboardAccelerator Modifiers="Control" Key="Enter" />
+                </Button.KeyboardAccelerators>
+            </Button>
             <Button x:Name="CancelButton" Grid.Column="1" Content="Cancelar" Click="OnCancel" IsEnabled="False" />
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4" Margin="8,0,0,0">
                 <TextBlock x:Name="StageText" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -168,7 +179,7 @@
                     </Viewbox>
                     <TextBlock Text="Aquí saldrán los subtítulos" Style="{StaticResource Seccion}" HorizontalAlignment="Center" Margin="0" />
                     <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Suelta un video o un audio, elige el idioma y pulsa «Generar subtítulos». Podrás corregir cada bloque antes de guardarlo." />
+                               Text="Suelta un video o un audio, elige el idioma y pulsa «Generar subtítulos» (Ctrl+Entrar). Podrás corregir cada bloque antes de guardarlo. Con varios archivos a la vez, cada uno se guarda al terminar." />
                 </StackPanel>
             </Grid>
         </Border>

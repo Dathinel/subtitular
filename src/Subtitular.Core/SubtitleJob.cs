@@ -37,10 +37,13 @@ public readonly record struct JobProgress(JobStage Stage, double StageFraction, 
     };
 
     /// <summary>Etapa, porcentaje y tiempo transcurrido; el que falta se estima por el total y solo con base (≥ 5 %).</summary>
-    public string Status(TimeSpan elapsed)
+    public string Status(TimeSpan elapsed) => Status(elapsed, Overall);
+
+    /// <summary>Igual, pero el que falta se estima sobre otro total (el de una cola de varios archivos).</summary>
+    public string Status(TimeSpan elapsed, double overall)
     {
         string s = $"{Label} · {(int)(StageFraction * 100)} % · {FormatClock(elapsed)}";
-        return Overall >= 0.05 ? s + $" · quedan ~{FormatClock(elapsed * (1 / Overall - 1))}" : s;
+        return overall >= 0.05 ? s + $" · quedan ~{FormatClock(elapsed * (1 / overall - 1))}" : s;
     }
 
     /// <summary>m:ss, y h:mm:ss a partir de una hora.</summary>

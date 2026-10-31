@@ -6,7 +6,7 @@ Subtítulos automáticos para Windows, en tu PC y sin conexión. Le das un video
 
 ## Qué hay
 
-- **`Subtitular.exe`** (ventana): suelta un video o audio, elige idioma, formato (SRT/VTT), carpeta, «Traducir a…» y «Leer en voz alta»; barra de progreso por etapa, Cancelar, vista previa editable bloque a bloque y Guardar. Los errores salen en español dentro de la ventana.
+- **`Subtitular.exe`** (ventana): suelta un video o audio (o varios: se procesan en cola y cada uno se guarda al terminar), elige idioma, formato (SRT/VTT), carpeta, «Traducir a…» y «Leer en voz alta»; barra de progreso por etapa y por archivo, Cancelar, vista previa editable bloque a bloque y Guardar. Recuerda lo último elegido, abre la carpeta del resultado al terminar y responde a `Ctrl+O` y `Ctrl+Entrar`. Los errores salen en español dentro de la ventana.
 - **`Subtitular.Cli.exe`**: `Subtitular.Cli video.mp4 [--idioma es] [--formato vtt] [--traducir en] [--voz] [--salida carpeta]`. Deja `video.srt` (o `video.en.srt`) y, con `--voz`, `video.wav` con cada frase en su tiempo.
 - Toda la lógica vive en `Subtitular.Core`; la ventana y la CLI solo la llaman. Cifras en `docs/informe-fase-1.md` y `docs/informe-fase-2.md`.
 
