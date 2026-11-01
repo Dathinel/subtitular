@@ -45,3 +45,7 @@ La lógica (tag, comparación, 24 h, «Más tarde», Lanzador) tiene pruebas sin
 4. **Más tarde.** La franja se va y en `preferencias.json` queda `skippedVersion: "1.0.0"`. Cierra y abre pasadas 24 h (o borra `lastUpdateCheck` del archivo): no vuelve a salir. Cambia a mano `skippedVersion` a `0.9.5`: vuelve a salir.
 5. **Buscar actualizaciones.** En Ajustes, el enlace consulta al momento aunque no hayan pasado 24 h y aunque la versión esté descartada: con la `0.9.0`, sale la franja; con la app al día, la barra azul «No hay nada nuevo: Subtitular 1.0.0 es la última versión.»; sin red, la barra amarilla «No se pudo consultar…» (en menos de 6 s: el límite es de 5). Mientras consulta, el enlace queda apagado y la ventana responde.
 6. **Casilla.** Desmarca «Avisar cuando haya una versión nueva», cierra y abre: la casilla sigue desmarcada y `lastUpdateCheck` no cambia aunque hayan pasado 24 h; «Buscar actualizaciones» sigue funcionando.
+
+## Resultado del repaso del 1-nov (Claude con el ratón, `dist\Subtitular`)
+
+Pasaron: arranque, «Buscar actualizaciones» («No hay nada nuevo: Subtitular 1.0.0 es la última versión»), `Ctrl+O` con ruta escrita, cabecera con duración y «sin subtítulos al lado», Generar con «Detectar» (dos bloques en «en» de un video de prueba con tono), Guardar deja el `.srt` junto al video y abre el Explorador con el archivo elegido. Sin probar: cancelar, traducir, voz, cola de varios, tema claro.
