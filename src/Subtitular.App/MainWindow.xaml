@@ -29,12 +29,26 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
+        <!-- Versión nueva: franja discreta con los colores del acento; solo se ve cuando GitHub tiene una release mayor que esta. -->
+        <Border x:Name="UpdateStrip" Grid.Row="0" Visibility="Collapsed" Background="{ThemeResource AcentoSuaveBrush}" BorderBrush="{ThemeResource AcentoBrush}"
+                BorderThickness="1" CornerRadius="8" Padding="16,8">
+            <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                <FontIcon Glyph="&#xE896;" FontSize="16" Foreground="{ThemeResource AcentoBrush}" VerticalAlignment="Center" AutomationProperties.Name="Versión nueva" />
+                <TextBlock x:Name="UpdateText" Style="{ThemeResource BodyStrongTextBlockStyle}" VerticalAlignment="Center" />
+                <HyperlinkButton Content="Ver novedades" Click="OnViewRelease" Padding="4,2" ToolTipService.ToolTip="Abre la release en el navegador" />
+                <HyperlinkButton x:Name="OpenLauncherButton" Content="Abrir el Lanzador" Click="OnOpenLauncher" Padding="4,2" Visibility="Collapsed"
+                                 ToolTipService.ToolTip="El Lanzador instala la versión nueva" />
+                <HyperlinkButton Content="Más tarde" Click="OnUpdateLater" Padding="4,2" ToolTipService.ToolTip="No volver a avisar de esta versión" />
+            </StackPanel>
+        </Border>
+
         <!-- Cabecera: icono, nombre y lema; a la derecha, «Acerca de» con la versión, la licencia y el crédito de Rodaje (término 1 de su licencia). -->
-        <HyperlinkButton Grid.Row="0" Content="Acerca de" HorizontalAlignment="Right" VerticalAlignment="Top" Canvas.ZIndex="1" Click="OnAbout">
+        <HyperlinkButton Grid.Row="1" Content="Acerca de" HorizontalAlignment="Right" VerticalAlignment="Top" Canvas.ZIndex="1" Click="OnAbout">
             <FlyoutBase.AttachedFlyout>
                 <Flyout>
                     <StackPanel Spacing="8" MaxWidth="400">
@@ -49,7 +63,7 @@
                 </Flyout>
             </FlyoutBase.AttachedFlyout>
         </HyperlinkButton>
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16">
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16">
             <Viewbox Width="48" Height="48" VerticalAlignment="Center">
                 <Canvas Width="256" Height="256">
                     <Path Data="{StaticResource Burbuja}" Fill="{ThemeResource AcentoBrush}" />
@@ -71,7 +85,7 @@
         </StackPanel>
 
         <!-- Archivo: zona para soltar. -->
-        <Border Grid.Row="1" Style="{StaticResource Tarjeta}" Translation="0,0,8" BorderBrush="{ThemeResource AcentoBrush}" Background="{ThemeResource AcentoSuaveBrush}">
+        <Border Grid.Row="2" Style="{StaticResource Tarjeta}" Translation="0,0,8" BorderBrush="{ThemeResource AcentoBrush}" Background="{ThemeResource AcentoSuaveBrush}">
             <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
                 <Button Content="Elegir…" Click="OnChoose" ToolTipService.ToolTip="Elegir uno o varios archivos (Ctrl+O)">
                     <Button.KeyboardAccelerators>
@@ -86,7 +100,7 @@
         </Border>
 
         <!-- Ajustes. -->
-        <Border Grid.Row="2" Style="{StaticResource Tarjeta}" Translation="0,0,8">
+        <Border Grid.Row="3" Style="{StaticResource Tarjeta}" Translation="0,0,8">
             <StackPanel Spacing="8">
                 <TextBlock Text="Ajustes" Style="{StaticResource Seccion}" />
                 <StackPanel Orientation="Horizontal" Spacing="16">
@@ -109,11 +123,17 @@
                     <CheckBox x:Name="SpeakBox" Grid.Column="2" Content="Leer en voz alta (WAV junto al video)" Margin="16,0,0,0" VerticalAlignment="Bottom" />
                     <CheckBox x:Name="OpenFolderBox" Grid.Column="3" Content="Abrir la carpeta al terminar" Margin="16,0,0,0" VerticalAlignment="Bottom" IsChecked="True" />
                 </Grid>
+                <!-- Versión nueva: al arrancar (como mucho una consulta a GitHub cada 24 h) o al momento con el enlace. -->
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <CheckBox x:Name="UpdatesBox" Content="Avisar cuando haya una versión nueva" IsChecked="True" />
+                    <HyperlinkButton x:Name="CheckUpdatesButton" Content="Buscar actualizaciones" Click="OnCheckUpdates" VerticalAlignment="Center" Padding="4,2"
+                                     ToolTipService.ToolTip="Consulta ahora la última versión publicada en GitHub" />
+                </StackPanel>
             </StackPanel>
         </Border>
 
         <!-- Acción y progreso: etapa, porcentaje, tiempo y tic al terminar. -->
-        <Grid Grid.Row="3" ColumnSpacing="8">
+        <Grid Grid.Row="4" ColumnSpacing="8">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -140,7 +160,7 @@
         </Grid>
 
         <!-- Subtítulos: lista editable, o el estado vacío que dice qué hacer. -->
-        <Border Grid.Row="4" Style="{StaticResource Tarjeta}" Translation="0,0,8" Padding="16,16,16,8">
+        <Border Grid.Row="5" Style="{StaticResource Tarjeta}" Translation="0,0,8" Padding="16,16,16,8">
             <Grid RowSpacing="8">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -184,7 +204,7 @@
             </Grid>
         </Border>
 
-        <StackPanel Grid.Row="5" Spacing="8">
+        <StackPanel Grid.Row="6" Spacing="8">
             <InfoBar x:Name="Notice" IsOpen="False" IsClosable="True" />
             <Button x:Name="SaveButton" Content="Guardar" Style="{ThemeResource AccentButtonStyle}" Click="OnSave" IsEnabled="False" HorizontalAlignment="Right" />
         </StackPanel>
