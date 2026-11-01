@@ -25,16 +25,6 @@ public sealed record WindowPlacement(int X, int Y, int Width, int Height)
         }
     }
 
-    /// <summary>Si no se puede escribir (disco lleno, permisos) se pierde el recuerdo, no la sesión.</summary>
-    public void Save(string path)
-    {
-        try
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllBytes(path, JsonSerializer.SerializeToUtf8Bytes(this, SubtitularJsonContext.Default.WindowPlacement));
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-        }
-    }
+    /// <summary>Escritura atómica (<see cref="JsonFile"/>); si no se puede escribir se pierde el recuerdo, no la sesión.</summary>
+    public void Save(string path) => JsonFile.Write(path, JsonSerializer.SerializeToUtf8Bytes(this, SubtitularJsonContext.Default.WindowPlacement));
 }

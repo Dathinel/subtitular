@@ -22,40 +22,54 @@ public sealed class CatalogoEntradaTests
         throw new InvalidOperationException("No se encontró la raíz del repositorio.");
     }
 
+    private static string MakeZip(string temp)
+    {
+        string zipPath = Path.Combine(temp, "Subtitular-9.9.9-win-x64.zip");
+        using (ZipArchive zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
+        using (Stream contenido = zip.CreateEntry("README.txt").Open())
+        {
+            contenido.Write("prueba"u8);
+        }
+        return zipPath;
+    }
+
+    /// <summary>Windows PowerShell en Windows (el que usa la CI); en otro sistema, pwsh, para probar el script también ahí.</summary>
+    private static void RunScript(string zipPath, string salida, string? workingDirectory)
+    {
+        var psi = new ProcessStartInfo(OperatingSystem.IsWindows() ? "powershell" : "pwsh") { RedirectStandardOutput = true, RedirectStandardError = true };
+        if (workingDirectory is not null)
+        {
+            psi.WorkingDirectory = workingDirectory;
+        }
+        // Windows PowerShell 5.1 arma su PSModulePath por omisión solo si no lo hereda: el del host de pruebas
+        // (lanzado desde pwsh en la CI) no le servía y sus módulos propios no cargaban.
+        psi.Environment.Remove("PSModulePath");
+        psi.ArgumentList.Add("-NoProfile");
+        psi.ArgumentList.Add("-ExecutionPolicy");
+        psi.ArgumentList.Add("Bypass");
+        psi.ArgumentList.Add("-File");
+        psi.ArgumentList.Add(Path.Combine(FindRepoRoot(), "build", "catalogo-entrada.ps1"));
+        psi.ArgumentList.Add("-Version");
+        psi.ArgumentList.Add("9.9.9");
+        psi.ArgumentList.Add("-Zip");
+        psi.ArgumentList.Add(zipPath);
+        psi.ArgumentList.Add("-Salida");
+        psi.ArgumentList.Add(salida);
+        using Process proceso = Process.Start(psi)!;
+        string texto = proceso.StandardOutput.ReadToEnd() + proceso.StandardError.ReadToEnd();
+        proceso.WaitForExit();
+        Assert.True(proceso.ExitCode == 0, texto);
+    }
+
     [Fact]
     public void Catalogo_entrada_tiene_la_huella_real_del_zip_y_pasa_por_SignedIndex()
     {
-        string root = FindRepoRoot();
         string temp = Directory.CreateTempSubdirectory("subtitular-catalogo-").FullName;
         try
         {
-            string zipPath = Path.Combine(temp, "Subtitular-9.9.9-win-x64.zip");
-            using (ZipArchive zip = ZipFile.Open(zipPath, ZipArchiveMode.Create))
-            using (Stream contenido = zip.CreateEntry("README.txt").Open())
-            {
-                contenido.Write("prueba"u8);
-            }
+            string zipPath = MakeZip(temp);
             string jsonPath = Path.Combine(temp, "catalogo.json");
-
-            var psi = new ProcessStartInfo("powershell") { RedirectStandardOutput = true, RedirectStandardError = true };
-            // Windows PowerShell 5.1 arma su PSModulePath por omisión solo si no lo hereda: el del host de pruebas
-            // (lanzado desde pwsh en la CI) no le servía y sus módulos propios no cargaban.
-            psi.Environment.Remove("PSModulePath");
-            psi.ArgumentList.Add("-NoProfile");
-            psi.ArgumentList.Add("-ExecutionPolicy");
-            psi.ArgumentList.Add("Bypass");
-            psi.ArgumentList.Add("-File");
-            psi.ArgumentList.Add(Path.Combine(root, "build", "catalogo-entrada.ps1"));
-            psi.ArgumentList.Add("-Version");
-            psi.ArgumentList.Add("9.9.9");
-            psi.ArgumentList.Add("-Zip");
-            psi.ArgumentList.Add(zipPath);
-            psi.ArgumentList.Add("-Salida");
-            psi.ArgumentList.Add(jsonPath);
-            using Process proceso = Process.Start(psi)!;
-            string salida = proceso.StandardOutput.ReadToEnd() + proceso.StandardError.ReadToEnd();
-            proceso.WaitForExit();
-            Assert.True(proceso.ExitCode == 0, salida);
+            RunScript(zipPath, jsonPath, null);
 
             string expectedSha256 = Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(zipPath)));
             long expectedSize = new FileInfo(zipPath).Length;
@@ -79,6 +93,32 @@ public sealed class CatalogoEntradaTests
             Assert.Equal(expectedSha256, entry.Sha256);
             Assert.Equal(expectedSize, entry.Size);
             Assert.Equal(new Uri("https://github.com/Dathinel/subtitular/releases/download/v9.9.9/Subtitular-9.9.9-win-x64.zip"), entry.Url);
+        }
+        finally
+        {
+            Directory.Delete(temp, recursive: true);
+        }
+    }
+
+    /// <summary>
+    /// Una <c>-Salida</c> relativa (solo un nombre o con subcarpeta) va contra el directorio actual, como <c>-Zip</c>; antes
+    /// <c>WriteAllText</c> la resolvía contra el directorio del proceso y, con solo un nombre, <c>Split-Path</c> no daba carpeta.
+    /// </summary>
+    [Fact]
+    public void Salida_relativa_va_contra_el_directorio_actual()
+    {
+        string temp = Directory.CreateTempSubdirectory("subtitular-catalogo-rel-").FullName;
+        try
+        {
+            string zipPath = MakeZip(temp);
+            RunScript(zipPath, "catalogo.json", temp);
+            RunScript(Path.GetFileName(zipPath), Path.Combine("salida", "sub", "catalogo.json"), temp);
+            foreach (string relative in new[] { "catalogo.json", Path.Combine("salida", "sub", "catalogo.json") })
+            {
+                using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(temp, relative), Encoding.UTF8));
+                Assert.Equal("9.9.9", doc.RootElement.GetProperty("version").GetString());
+            }
+            Assert.False(File.Exists(Path.Combine(FindRepoRoot(), "catalogo.json")));
         }
         finally
         {

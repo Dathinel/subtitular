@@ -40,6 +40,8 @@ public sealed partial class MainWindow : Window
     /// <summary>El archivo al que pertenece la vista previa (con varios, el último que salió bien).</summary>
     private string? _previewFile;
     private Transcript? _transcript;
+    /// <summary>La transcripción de la que ya hay un WAV de voz (la cola o un Guardar anterior lo dejaron): Guardar no lo regenera si el texto no cambió.</summary>
+    private Transcript? _spoken;
     private CancellationTokenSource? _cts;
     private Preferences _prefs;
     /// <summary>La versión nueva que muestra la franja, y el Lanzador si está en el PC.</summary>
@@ -91,6 +93,7 @@ public sealed partial class MainWindow : Window
         SelectTag(TranslateBox, _prefs.TranslateTo ?? "");
         SpeakBox.IsChecked = _prefs.Speak;
         OpenFolderBox.IsChecked = _prefs.OpenFolder;
+        SkipReviewBox.IsChecked = _prefs.SaveWithoutReview;
         UpdatesBox.IsChecked = _prefs.CheckUpdates;
         OutputDirBox.Text = _prefs.OutputDir ?? "";
         // Se guardan al cambiar, no solo al cerrar: un apagón o un cierre forzado no las pierde.
@@ -98,7 +101,7 @@ public sealed partial class MainWindow : Window
         FormatBox.SelectionChanged += (_, _) => SavePreferences();
         TranslateBox.SelectionChanged += (_, _) => SavePreferences();
         OutputDirBox.TextChanged += (_, _) => SavePreferences();
-        foreach (CheckBox box in new[] { SpeakBox, OpenFolderBox })
+        foreach (CheckBox box in new[] { SpeakBox, OpenFolderBox, SkipReviewBox, UpdatesBox })
         {
             box.Checked += (_, _) => SavePreferences();
             box.Unchecked += (_, _) => SavePreferences();
@@ -230,16 +233,24 @@ public sealed partial class MainWindow : Window
         TranslateTo = Tag(TranslateBox) is { Length: > 0 } t ? t : null,
         Speak = SpeakBox.IsChecked == true,
         OpenFolder = OpenFolderBox.IsChecked == true,
+        SaveWithoutReview = SkipReviewBox.IsChecked == true,
         CheckUpdates = UpdatesBox.IsChecked == true,
     };
 
     private void OnDragOver(object sender, DragEventArgs e) =>
         e.AcceptedOperation = e.DataView.Contains(StandardDataFormats.StorageItems) ? DataPackageOperation.Copy : DataPackageOperation.None;
 
+    /// <summary>Archivos y carpetas (de una carpeta entran sus videos y audios). Lo que no está en el disco (un adjunto, un elemento virtual) se avisa.</summary>
     private async void OnDrop(object sender, DragEventArgs e) => await GuardedAsync(async () =>
     {
         IReadOnlyList<IStorageItem> items = await e.DataView.GetStorageItemsAsync();
-        await LoadFilesAsync([.. items.OfType<IStorageFile>().Select(f => f.Path)]);
+        List<string> paths = [.. items.Where(i => i is IStorageFile or IStorageFolder).Select(i => i.Path).Where(p => !string.IsNullOrWhiteSpace(p))];
+        if (paths.Count == 0)
+        {
+            ShowError("Lo que has soltado no es un archivo ni una carpeta del disco. Suelta videos o audios, o una carpeta con ellos.");
+            return;
+        }
+        await LoadFilesAsync(paths);
     });
 
     private nint Hwnd => WinRT.Interop.WindowNative.GetWindowHandle(this);
@@ -275,7 +286,7 @@ public sealed partial class MainWindow : Window
         }
     }
 
-    /// <summary>Carga la cola: uno o varios archivos. Los que no son video ni audio se avisan y se dejan fuera.</summary>
+    /// <summary>Carga la cola: archivos o carpetas (<see cref="MediaInfo.Select"/>). Lo que no es video ni audio se avisa y se deja fuera.</summary>
     private async Task LoadFilesAsync(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0)
@@ -288,13 +299,12 @@ public sealed partial class MainWindow : Window
             return;
         }
         Notice.IsOpen = false;
-        List<string> valid = [.. paths.Where(p => MediaInfo.Extensions.Contains(Path.GetExtension(p).ToLowerInvariant()))];
-        List<string> rejected = [.. paths.Except(valid).Select(p => Path.GetFileName(p))];
-        if (rejected.Count > 0)
+        MediaSelection selection = MediaInfo.Select(paths);
+        if (selection.Warning is { } warning)
         {
-            string names = string.Join(", ", rejected.Select(n => $"«{n}»"));
-            ShowError($"{names} {(rejected.Count == 1 ? "no es" : "no son")} un video ni un audio que Subtitular reconozca ({string.Join(", ", MediaInfo.Extensions)}).");
+            ShowError(warning);
         }
+        List<string> valid = [.. selection.Media];
         if (valid.Count == 0)
         {
             return;
@@ -305,6 +315,7 @@ public sealed partial class MainWindow : Window
         SavePreferences();
         _previewFile = null;
         _transcript = null;
+        _spoken = null;
         _cues.Clear();
         SaveButton.IsEnabled = false;
         RunButton.IsEnabled = true;
@@ -359,8 +370,9 @@ public sealed partial class MainWindow : Window
         _cues.Clear();
         _transcript = null;
         _previewFile = null;
+        _spoken = null;
         SaveButton.IsEnabled = false;
-        if (_files.Count == 1)
+        if (SubtitleJob.ReviewsBeforeSaving(_files.Count, SkipReviewBox.IsChecked == true))
         {
             string file = _files[0];
             Transcript? transcript = await BusyAsync((progress, token) => SubtitleJob.RunAsync(Options(file), Single(progress, file), token));
@@ -368,12 +380,12 @@ public sealed partial class MainWindow : Window
             {
                 return;
             }
-            ShowPreview(file, transcript);
+            ShowPreview(file, transcript, null);
             Show(InfoBarSeverity.Informational, $"{_cues.Count} bloques en «{transcript.Language}». Revisa el texto y pulsa Guardar.");
             return;
         }
 
-        // Varios: cada uno se transcribe y se guarda seguido; la vista previa queda con el último que salió bien.
+        // Varios (o uno con «Guardar sin revisar»): cada uno se transcribe y se guarda seguido; la vista previa queda con el último que salió bien.
         List<JobOptions> jobs = [.. _files.Select(Options)];
         IReadOnlyList<BatchResult>? results = await BusyAsync((progress, token) => JobBatch.RunAsync(jobs, progress, token));
         if (results is null)
@@ -382,17 +394,26 @@ public sealed partial class MainWindow : Window
         }
         if (results.LastOrDefault(r => r.Ok) is { Transcript: { } last } ok)
         {
-            ShowPreview(ok.Options.InputFile, last);
+            ShowPreview(ok.Options.InputFile, last, ok.Audio is null ? null : last);
         }
         // Cancelar no tira lo ya guardado: el resumen dice cuántos salieron y en cuál se paró.
-        Show(results.All(r => r.Ok) ? InfoBarSeverity.Success : InfoBarSeverity.Warning, JobBatch.Summary(results));
+        if (results is [{ Ok: true, Subtitles: { } subtitles } only])
+        {
+            Show(InfoBarSeverity.Success, only.Audio is null ? $"Guardado: {subtitles}" : $"Guardados: {subtitles} y {only.Audio}");
+        }
+        else
+        {
+            Show(results.All(r => r.Ok) ? InfoBarSeverity.Success : InfoBarSeverity.Warning, JobBatch.Summary(results));
+        }
         OpenResultFolder([.. results.Where(r => r.Ok).SelectMany(r => new[] { r.Subtitles, r.Audio })]);
     }
 
-    private void ShowPreview(string file, Transcript transcript)
+    /// <summary><paramref name="spoken"/>: la transcripción de la que ya quedó el WAV de voz, si lo hay.</summary>
+    private void ShowPreview(string file, Transcript transcript, Transcript? spoken)
     {
         _previewFile = file;
         _transcript = transcript;
+        _spoken = spoken;
         foreach (SubtitleCue cue in SubtitlePreview.Cues(transcript))
         {
             _cues.Add(new CueItem(cue));
@@ -408,27 +429,23 @@ public sealed partial class MainWindow : Window
         }
         string file = _previewFile;
         Transcript edited = SubtitlePreview.ToTranscript(_cues.Select(c => (c.Start, c.End, c.Text)), _transcript);
-        (string Subtitles, string? Audio)? saved = await BusyAsync((progress, token) => SubtitleJob.SaveAsync(edited, Options(file), Single(progress, file), token));
+        Transcript? spoken = _spoken;
+        (string Subtitles, string? Audio)? saved = await BusyAsync((progress, token) => SubtitleJob.SaveAsync(edited, Options(file), Single(progress, file), token, spoken));
         if (saved is { } s)
         {
+            // Si quedó un WAV, es el de este texto: otro Guardar sin cambios no lo vuelve a generar.
+            _spoken = s.Audio is null ? null : edited;
             Show(InfoBarSeverity.Success, s.Audio is null ? $"Guardado: {s.Subtitles}" : $"Guardados: {s.Subtitles} y {s.Audio}");
             OpenResultFolder([s.Subtitles, s.Audio]);
         }
     }
 
-    /// <summary>Abre el Explorador en el resultado si la casilla está marcada; si no se puede, no pasa nada.</summary>
+    /// <summary>Abre el Explorador en el resultado si la casilla está marcada.</summary>
     private void OpenResultFolder(IReadOnlyList<string?> outputs)
     {
-        if (OpenFolderBox.IsChecked != true || ResultFolder.ExplorerCommand(outputs) is not { } command)
+        if (OpenFolderBox.IsChecked == true)
         {
-            return;
-        }
-        try
-        {
-            Process.Start(new ProcessStartInfo(command.Exe, command.Arguments) { UseShellExecute = false })?.Dispose();
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
+            ResultFolder.Open(outputs);
         }
     }
 

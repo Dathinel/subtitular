@@ -15,6 +15,7 @@ public sealed class PreferencesTests
             Assert.Equal(new Preferences(), defaults);
             Assert.Equal("auto", defaults.Language);
             Assert.True(defaults.OpenFolder);
+            Assert.False(defaults.SaveWithoutReview);
             Assert.True(defaults.CheckUpdates);
             Assert.Null(defaults.LastUpdateCheck);
             Assert.Null(defaults.SkippedVersion);
@@ -23,10 +24,12 @@ public sealed class PreferencesTests
             Preferences chosen = new()
             {
                 LastInputDir = dir, OutputDir = dir, Language = "es", Format = "vtt", TranslateTo = "en", Speak = true, OpenFolder = false,
-                CheckUpdates = false, LastUpdateCheck = new DateTimeOffset(2026, 11, 1, 9, 30, 0, TimeSpan.FromHours(-5)), SkippedVersion = "1.1.0",
+                SaveWithoutReview = true, CheckUpdates = false, LastUpdateCheck = new DateTimeOffset(2026, 11, 1, 9, 30, 0, TimeSpan.FromHours(-5)), SkippedVersion = "1.1.0",
             };
             chosen.Save(path);
             Assert.Equal(chosen, Preferences.Load(path));
+            // Escritura atómica: se escribe un .tmp y se renombra encima; no queda rastro.
+            Assert.False(File.Exists(path + ".tmp"));
 
             // Una carpeta que no existe ahora (disco desconectado) se conserva; un formato o idioma raros vuelven a los de fábrica.
             string gone = Path.Combine(dir, "borrada");
@@ -45,6 +48,7 @@ public sealed class PreferencesTests
             // Un archivo viejo sin las casillas nuevas las deja activadas, y el aviso de versión toca al arrancar.
             File.WriteAllText(path, """{"language":"en"}""");
             Assert.True(Preferences.Load(path).OpenFolder);
+            Assert.False(Preferences.Load(path).SaveWithoutReview);
             Assert.True(Preferences.Load(path).CheckUpdates);
             Assert.Null(Preferences.Load(path).LastUpdateCheck);
             Assert.Equal("en", Preferences.Load(path).Language);
@@ -53,5 +57,31 @@ public sealed class PreferencesTests
         {
             Directory.Delete(dir, true);
         }
+    }
+
+    [Fact]
+    public void Saving_where_it_cannot_write_keeps_the_old_file_and_does_not_throw()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "subtitular-prefs-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            // La ruta es una carpeta: no se puede escribir ahí; el guardado calla y no deja un .tmp.
+            Directory.CreateDirectory(Path.Combine(dir, "preferencias.json"));
+            new Preferences { Language = "es" }.Save(Path.Combine(dir, "preferencias.json"));
+            Assert.False(File.Exists(Path.Combine(dir, "preferencias.json.tmp")));
+            Assert.Equal(new Preferences(), Preferences.Load(Path.Combine(dir, "preferencias.json")));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
+    public void One_file_is_reviewed_unless_told_otherwise_and_queues_never_are()
+    {
+        Assert.True(SubtitleJob.ReviewsBeforeSaving(1, saveWithoutReview: false));
+        Assert.False(SubtitleJob.ReviewsBeforeSaving(1, saveWithoutReview: true));
+        Assert.False(SubtitleJob.ReviewsBeforeSaving(3, saveWithoutReview: false));
     }
 }

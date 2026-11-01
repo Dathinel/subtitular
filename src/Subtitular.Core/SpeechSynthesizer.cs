@@ -26,6 +26,20 @@ public static class SpeechSynthesizer
         };
     }
 
+    /// <summary>
+    /// Si la voz leería lo mismo: el mismo idioma y las mismas palabras, segmento a segmento, sin contar los vacíos ni los espacios
+    /// de más. Los cortes de bloque no cuentan: una corrección de texto en la vista previa sí.
+    /// </summary>
+    public static bool SameSpeech(Transcript a, Transcript b)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        ArgumentNullException.ThrowIfNull(b);
+        return string.Equals(a.Language, b.Language, StringComparison.OrdinalIgnoreCase) && string.Equals(SpokenText(a), SpokenText(b), StringComparison.Ordinal);
+    }
+
+    private static string SpokenText(Transcript t) =>
+        string.Join(' ', t.Segments.Where(s => !string.IsNullOrWhiteSpace(s.Text)).SelectMany(s => s.Text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)));
+
     /// <summary>Audio mono f32 con cada segmento colocado en su tiempo, y su frecuencia de muestreo.</summary>
     public static async Task<(float[] Audio, int SampleRate)> SpeakAsync(
         Transcript transcript,

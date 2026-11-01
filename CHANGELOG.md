@@ -6,12 +6,18 @@
 - **Cola de archivos**: se pueden soltar o elegir varios videos o audios a la vez; se procesan uno tras otro con «Archivo 2 de 5 · nombre · etapa» en la barra, cada uno se guarda al terminar y un archivo que falla no para a los demás. Cancelar corta el archivo en curso y no deja procesos de FFmpeg ni del módulo vivos.
 - **Abrir la carpeta al terminar**: casilla (activada de fábrica) que abre el Explorador con el resultado seleccionado al guardar.
 - **Atajos**: `Ctrl+O` abre «Elegir…» y `Ctrl+Entrar` pulsa «Generar subtítulos».
+- **Soltar una carpeta**: encola los videos y audios que contiene (por orden de nombre; no mira en sus subcarpetas). Una carpeta sin medios, un archivo que no lo es o algo que no está en el disco se avisan en la barra.
+- **«Guardar sin revisar»**: casilla en Ajustes (apagada de fábrica, se recuerda) que guarda un solo archivo al terminar, sin pasar por la vista previa, igual que ya hacía la cola de varios.
 - **Aviso de versión nueva**: al arrancar, como mucho una vez cada 24 h, la ventana consulta la última release de `Dathinel/subtitular` en la API pública de GitHub (sin cuenta, `User-Agent` «Subtitular/<versión>», 5 s de límite, fuera del hilo de la interfaz); sin red o con una respuesta rara, no dice nada. Si hay una versión mayor, una franja discreta arriba dice «Subtitular 1.1.0 disponible» con «Ver novedades» (la release en el navegador), «Abrir el Lanzador» si está instalado (`%LOCALAPPDATA%\Dathinel\Lanzador` o `SUBTITULAR_LANZADOR`) y «Más tarde» (no vuelve a avisar de esa versión). En Ajustes, la casilla «Avisar cuando haya una versión nueva» (activada de fábrica) y «Buscar actualizaciones», que consulta al momento y también dice cuando no hay nada nuevo. La lógica (`UpdateCheck`, `ReleaseInfo`, `Launcher`) está en `Subtitular.Core` con pruebas sin red.
 
 ### Cambiado
 - La ventana recuerda la última carpeta (la del archivo elegido, para el diálogo, y la de salida), el idioma del audio, el formato, «Traducir a…», «Leer en voz alta» y la casilla de abrir la carpeta (`%LOCALAPPDATA%\Dathinel\Subtitular\preferencias.json`). Ahí mismo van la casilla del aviso de versión nueva, la hora de la última consulta y la versión descartada con «Más tarde».
 
+- Las preferencias y la posición de la ventana se escriben de forma atómica (un `.tmp` que se renombra encima): un apagón a medias ya no deja un archivo roto.
+
 ### Corregido
+- Tras una cola (o con «Guardar sin revisar»), pulsar Guardar con «Leer en voz alta» volvía a generar el WAV aunque el texto no hubiera cambiado; ahora solo lo regenera si cambió alguna palabra (o el idioma), no por los cortes de bloque de la vista previa.
+- `build\catalogo-entrada.ps1` con una `-Salida` relativa la escribía contra el directorio del proceso y no contra el actual.
 - La CI de `main` fallaba en `CatalogoEntradaTests`: `build\catalogo-entrada.ps1` dependía de `Get-FileHash`, que en Windows PowerShell 5.1 no existe si el proceso hereda un `PSModulePath` ajeno (el del host de pruebas lanzado desde pwsh). La huella se calcula ahora con las clases de .NET.
 
 ## [1.0.0] - 2026-10-24

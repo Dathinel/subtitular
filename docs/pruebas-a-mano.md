@@ -35,6 +35,14 @@ Lo que la CI no puede comprobar (la lógica tiene pruebas en `BatchTests` y `Pre
 4. **Abrir la carpeta.** Con la casilla marcada, al guardar un archivo se abre el Explorador con el `.srt` seleccionado; con varios, se abre la carpeta. Desmarcada, no se abre nada.
 5. **Atajos.** `Ctrl+O` abre el diálogo de elegir; `Ctrl+Entrar` genera (y no hace nada mientras ya está generando o sin archivo). Con el foco dentro de un bloque de la vista previa, `Ctrl+Entrar` también debe generar y no meter un salto de línea.
 
+## Revisión de bloque (carpetas, «Guardar sin revisar», voz)
+
+La lógica tiene pruebas en `MediaSelectionTests`, `PreferencesTests` y `SpeechTests`; esto es lo que solo se ve con la ventana.
+
+1. **Soltar una carpeta.** Arrastra una carpeta con tres videos, un `.txt` y una subcarpeta con otro video: la cabecera dice «3 archivos en cola» (los de la carpeta, por nombre; el de la subcarpeta no entra) y no sale ningún aviso por el `.txt` (dentro de una carpeta se ignora en silencio). Suelta una carpeta sin medios: barra roja «La carpeta «x» no tiene videos ni audios.» y la cola no cambia. Suelta a la vez un video suelto y una carpeta: entran los dos. Arrastra un adjunto desde Outlook o un archivo desde dentro de un zip abierto en el Explorador: barra roja «Lo que has soltado no es un archivo ni una carpeta del disco…» (o el cursor de «no se puede soltar», según lo que ofrezca el origen).
+2. **Guardar sin revisar.** Marca la casilla, suelta un solo video y genera: al terminar no hay que pulsar Guardar; sale «Guardado: …srt» en verde, la vista previa queda rellena y, con la casilla de la carpeta, se abre el Explorador. Cierra y abre: la casilla sigue marcada. Desmárcala: vuelve el flujo de siempre («Revisa el texto y pulsa Guardar»).
+3. **Guardar sin regenerar la voz.** Con «Leer en voz alta» y «Guardar sin revisar» (o una cola de dos), genera; al terminar pulsa Guardar sin tocar nada: debe guardar al momento (sin la etapa «Generando la voz») y la fecha del `.voz.wav` no cambia. Corrige una palabra y vuelve a Guardar: ahora sí regenera la voz y el WAV cambia. Vuelve a Guardar sin tocar nada: otra vez al momento.
+
 ## Aviso de versión nueva
 
 La lógica (tag, comparación, 24 h, «Más tarde», Lanzador) tiene pruebas sin red en `UpdateCheckTests` y `LauncherTests`; esto es lo que solo se ve con la ventana y GitHub de verdad. Mientras la última release sea la 1.0.0 y esta compilación sea la 1.0.x, la franja no sale: para verla, baja `<Version>` en `Directory.Build.props` a `0.9.0` y publica.
