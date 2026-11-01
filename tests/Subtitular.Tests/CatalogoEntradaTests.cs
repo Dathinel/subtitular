@@ -38,6 +38,9 @@ public sealed class CatalogoEntradaTests
             string jsonPath = Path.Combine(temp, "catalogo.json");
 
             var psi = new ProcessStartInfo("powershell") { RedirectStandardOutput = true, RedirectStandardError = true };
+            // Windows PowerShell 5.1 arma su PSModulePath por omisión solo si no lo hereda: el del host de pruebas
+            // (lanzado desde pwsh en la CI) no le servía y sus módulos propios no cargaban.
+            psi.Environment.Remove("PSModulePath");
             psi.ArgumentList.Add("-NoProfile");
             psi.ArgumentList.Add("-ExecutionPolicy");
             psi.ArgumentList.Add("Bypass");

@@ -50,6 +50,7 @@ public sealed record SubtitleParameters(
 [JsonSerializable(typeof(TranscriptWord))]
 [JsonSerializable(typeof(SubtitleParameters))]
 [JsonSerializable(typeof(WindowPlacement))]
+[JsonSerializable(typeof(Preferences))]
 public sealed partial class SubtitularJsonContext : JsonSerializerContext;
 
 /// <summary>Un subtítulo para «traducir»: el id es el índice del segmento.</summary>

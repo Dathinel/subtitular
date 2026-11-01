@@ -24,3 +24,13 @@ Lo que solo se juzga a ojo. Sin captura: la app no tiene `--captura`.
 5. **Ventana.** Mueve y redimensiona la ventana, ciérrala y ábrela: vuelve al mismo sitio y tamaño (`%LOCALAPPDATA%\Dathinel\Subtitular\ventana.json`). No se deja bajar de 800×700. Si la cierras maximizada, se queda el último tamaño normal.
 6. **Acerca de.** Arriba a la derecha: versión, licencia y el crédito de Rodaje; los dos enlaces abren GitHub en el navegador.
 7. **Ritmo.** ¿Las tres tarjetas (archivo, ajustes, subtítulos) con sombra suave se ven ordenadas o recargadas? Con Tab, ¿se ve el foco en cada control?
+
+## Calidad de vida (1.0.1)
+
+Lo que la CI no puede comprobar (la lógica tiene pruebas en `BatchTests` y `PreferencesTests`).
+
+1. **Recordar.** Elige un archivo de una carpeta nueva, pon «Inglés», VTT, «Traducir a… Francés», marca la voz y una carpeta de salida; cierra y abre: todo debe seguir igual, y «Elegir…» debe abrirse en la carpeta del último archivo (`%LOCALAPPDATA%\Dathinel\Subtitular\preferencias.json`). Borra la carpeta de salida y vuelve a abrir: el campo queda vacío (junto al video).
+2. **Varios archivos.** Arrastra tres videos a la vez (o elígelos con Ctrl en el diálogo): la cabecera dice «3 archivos en cola» y debajo sus nombres. Generar: la barra dice «Archivo 1 de 3 · nombre · Transcribiendo · 45 %…», late indeterminada al empezar cada archivo, y al final «3 archivos listos» con la vista previa del último; en la carpeta deben estar los tres `.srt`. Mezcla un `.txt` en lo que sueltas: barra roja con su nombre y los videos siguen cargados. Renombra el segundo video antes de generar: «2 archivos listos, 1 con error: …» y los otros dos guardados.
+3. **Cancelar en cola.** Con tres archivos, cancela durante el segundo: «Operación cancelada.» en menos de un segundo, el primero ya guardado, y en el Administrador de tareas no queda ningún `ffmpeg.exe` ni `Rodaje.Module.*.exe`.
+4. **Abrir la carpeta.** Con la casilla marcada, al guardar un archivo se abre el Explorador con el `.srt` seleccionado; con varios, se abre la carpeta. Desmarcada, no se abre nada.
+5. **Atajos.** `Ctrl+O` abre el diálogo de elegir; `Ctrl+Entrar` genera (y no hace nada mientras ya está generando o sin archivo). Con el foco dentro de un bloque de la vista previa, `Ctrl+Entrar` también debe generar y no meter un salto de línea.

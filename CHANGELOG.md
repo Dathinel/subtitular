@@ -1,5 +1,18 @@
 # Historial de cambios de Subtitular
 
+## [Sin publicar]
+
+### Añadido
+- **Cola de archivos**: se pueden soltar o elegir varios videos o audios a la vez; se procesan uno tras otro con «Archivo 2 de 5 · nombre · etapa» en la barra, cada uno se guarda al terminar y un archivo que falla no para a los demás. Cancelar corta el archivo en curso y no deja procesos de FFmpeg ni del módulo vivos.
+- **Abrir la carpeta al terminar**: casilla (activada de fábrica) que abre el Explorador con el resultado seleccionado al guardar.
+- **Atajos**: `Ctrl+O` abre «Elegir…» y `Ctrl+Entrar` pulsa «Generar subtítulos».
+
+### Cambiado
+- La ventana recuerda la última carpeta (la del archivo elegido, para el diálogo, y la de salida), el idioma del audio, el formato, «Traducir a…», «Leer en voz alta» y la casilla de abrir la carpeta (`%LOCALAPPDATA%\Dathinel\Subtitular\preferencias.json`).
+
+### Corregido
+- La CI de `main` fallaba en `CatalogoEntradaTests`: `build\catalogo-entrada.ps1` dependía de `Get-FileHash`, que en Windows PowerShell 5.1 no existe si el proceso hereda un `PSModulePath` ajeno (el del host de pruebas lanzado desde pwsh). La huella se calcula ahora con las clases de .NET.
+
 ## [1.0.0] - 2026-10-24
 
 ### Añadido
