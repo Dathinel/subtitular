@@ -13,7 +13,7 @@
 ### Cambiado
 - La ventana recuerda la última carpeta (la del archivo elegido, para el diálogo, y la de salida), el idioma del audio, el formato, «Traducir a…», «Leer en voz alta» y la casilla de abrir la carpeta (`%LOCALAPPDATA%\Dathinel\Subtitular\preferencias.json`). Ahí mismo van la casilla del aviso de versión nueva, la hora de la última consulta y la versión descartada con «Más tarde».
 
-- Las preferencias y la posición de la ventana se escriben de forma atómica (un `.tmp` que se renombra encima): un apagón a medias ya no deja un archivo roto.
+- Las preferencias y la posición de la ventana se escriben de forma atómica (un «.tmp» que se renombra encima, con reintentos si el destino está bloqueado un instante): un apagón a medias ya no deja un archivo roto.
 
 ### Corregido
 - Tras una cola (o con «Guardar sin revisar»), pulsar Guardar con «Leer en voz alta» volvía a generar el WAV aunque el texto no hubiera cambiado; ahora solo lo regenera si cambió alguna palabra (o el idioma), no por los cortes de bloque de la vista previa.

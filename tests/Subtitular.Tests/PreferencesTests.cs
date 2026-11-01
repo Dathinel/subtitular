@@ -78,6 +78,35 @@ public sealed class PreferencesTests
     }
 
     [Fact]
+    public async Task Saving_retries_when_destination_is_temporarily_locked()
+    {
+        string dir = Path.Combine(Path.GetTempPath(), "subtitular-prefs-" + Guid.NewGuid().ToString("N"));
+        string path = Path.Combine(dir, "preferencias.json");
+        try
+        {
+            Directory.CreateDirectory(dir);
+            new Preferences { Language = "es" }.Save(path);
+
+            using FileStream stream = new(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            Task releaseTask = Task.Run(async () =>
+            {
+                await Task.Delay(120);
+                stream.Dispose();
+            });
+
+            new Preferences { Language = "en" }.Save(path);
+            await releaseTask;
+
+            Assert.Equal("en", Preferences.Load(path).Language);
+            Assert.False(File.Exists(path + ".tmp"));
+        }
+        finally
+        {
+            Directory.Delete(dir, true);
+        }
+    }
+
+    [Fact]
     public void One_file_is_reviewed_unless_told_otherwise_and_queues_never_are()
     {
         Assert.True(SubtitleJob.ReviewsBeforeSaving(1, saveWithoutReview: false));
