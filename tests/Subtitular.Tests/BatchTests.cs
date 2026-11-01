@@ -114,17 +114,4 @@ public sealed class BatchTests
         JobProgress p = JobProgress.Of([JobStage.Decode, JobStage.Transcribe], JobStage.Transcribe, 0.5);
         Assert.Equal(p.Status(TimeSpan.FromSeconds(30)), new BatchProgress(0, 1, "clip.mp4", p).Status(TimeSpan.FromSeconds(30)));
     }
-
-    [Fact]
-    public void Result_folder_opens_the_file_selected_or_the_common_folder()
-    {
-        string dir = Path.GetTempPath();
-        string srt = Path.Combine(dir, "clip.srt");
-        string wav = Path.Combine(dir, "clip.voz.wav");
-        Assert.Null(ResultFolder.Of([]));
-        Assert.Null(ResultFolder.ExplorerCommand([null]));
-        Assert.Equal(Path.TrimEndingDirectorySeparator(dir), ResultFolder.Of([srt, null, wav]));
-        Assert.Equal<(string, string)?>(("explorer.exe", "/select,\"" + srt + "\""), ResultFolder.ExplorerCommand([srt, null]));
-        Assert.Equal<(string, string)?>(("explorer.exe", "\"" + Path.TrimEndingDirectorySeparator(dir) + "\""), ResultFolder.ExplorerCommand([srt, wav]));
-    }
 }

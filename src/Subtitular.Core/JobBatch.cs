@@ -118,29 +118,3 @@ public sealed class SyncProgress<T>(Action<T> report) : IProgress<T>
 {
     public void Report(T value) => report(value);
 }
-
-/// <summary>Dónde quedó el resultado, para abrirlo en el Explorador al terminar.</summary>
-public static class ResultFolder
-{
-    /// <summary>Carpeta común de las salidas; si están en varias, la de la primera. Nula sin salidas.</summary>
-    public static string? Of(IEnumerable<string?> outputs)
-    {
-        ArgumentNullException.ThrowIfNull(outputs);
-        return outputs.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => Path.GetDirectoryName(Path.GetFullPath(o!))).FirstOrDefault(d => d is not null);
-    }
-
-    /// <summary>
-    /// Orden para el Explorador: con un solo archivo lo abre seleccionado («/select,»); con varios o ninguno abre la carpeta.
-    /// Nula si no hay nada que abrir.
-    /// </summary>
-    public static (string Exe, string Arguments)? ExplorerCommand(IReadOnlyList<string?> outputs)
-    {
-        ArgumentNullException.ThrowIfNull(outputs);
-        List<string> files = [.. outputs.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => Path.GetFullPath(o!))];
-        if (files.Count == 1)
-        {
-            return ("explorer.exe", "/select,\"" + files[0] + "\"");
-        }
-        return Of(files) is { } dir ? ("explorer.exe", "\"" + dir + "\"") : null;
-    }
-}

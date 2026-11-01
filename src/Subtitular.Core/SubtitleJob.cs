@@ -126,9 +126,16 @@ public static class SubtitleJob
         return transcript;
     }
 
-    /// <summary>Escribe los subtítulos y, si se pidió, el WAV con la voz. Devuelve las rutas escritas.</summary>
+    /// <summary>Un solo archivo pasa por la vista previa antes de guardarse, salvo con «Guardar sin revisar»; la cola se guarda sola.</summary>
+    public static bool ReviewsBeforeSaving(int files, bool saveWithoutReview) => files == 1 && !saveWithoutReview;
+
+    /// <summary>
+    /// Escribe los subtítulos y, si se pidió, el WAV con la voz. Devuelve las rutas escritas.
+    /// <paramref name="spoken"/> es la transcripción de la que ya se generó el WAV (la cola lo deja hecho): si la voz leería lo mismo
+    /// (<see cref="SpeechSynthesizer.SameSpeech"/>) y el WAV sigue ahí, no se vuelve a generar.
+    /// </summary>
     public static async Task<(string Subtitles, string? Audio)> SaveAsync(Transcript transcript, JobOptions options, IProgress<JobProgress>? progress = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, Transcript? spoken = null)
     {
         ArgumentNullException.ThrowIfNull(transcript);
         ArgumentNullException.ThrowIfNull(options);
@@ -146,15 +153,20 @@ public static class SubtitleJob
             }
         }
 
-        string? wav = null;
-        if (options.Speak)
+        if (!options.Speak)
         {
-            IReadOnlyList<JobStage> stages = StagesOf(options);
-            (float[] audio, int sampleRate) = await SpeechSynthesizer.SpeakAsync(transcript, options.VoiceModule, null,
-                new Progress<ModuleProgress>(p => progress?.Report(JobProgress.Of(stages, JobStage.Speak, p.Fraction))), cancellationToken).ConfigureAwait(false);
-            wav = OutputPath(options, ".voz.wav");
-            SpeechSynthesizer.WriteWav(wav, audio, sampleRate);
+            return (subtitles, null);
         }
+        string wav = OutputPath(options, ".voz.wav");
+        IReadOnlyList<JobStage> stages = StagesOf(options);
+        if (spoken is not null && File.Exists(wav) && SpeechSynthesizer.SameSpeech(transcript, spoken))
+        {
+            progress?.Report(JobProgress.Of(stages, JobStage.Speak, 1));
+            return (subtitles, wav);
+        }
+        (float[] audio, int sampleRate) = await SpeechSynthesizer.SpeakAsync(transcript, options.VoiceModule, null,
+            new Progress<ModuleProgress>(p => progress?.Report(JobProgress.Of(stages, JobStage.Speak, p.Fraction))), cancellationToken).ConfigureAwait(false);
+        SpeechSynthesizer.WriteWav(wav, audio, sampleRate);
         return (subtitles, wav);
     }
 

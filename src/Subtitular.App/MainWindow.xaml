@@ -93,7 +93,7 @@
                     </Button.KeyboardAccelerators>
                 </Button>
                 <StackPanel VerticalAlignment="Center" Spacing="4">
-                    <TextBlock x:Name="FileName" Text="Suelta aquí uno o varios videos o audios" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                    <TextBlock x:Name="FileName" Text="Suelta aquí videos o audios, o una carpeta con ellos" Style="{ThemeResource BodyStrongTextBlockStyle}" />
                     <TextBlock x:Name="FileInfo" Text="mp4, mkv, mov, mp3, wav y más; o pulsa Elegir… (Ctrl+O)" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                 </StackPanel>
             </StackPanel>
@@ -125,6 +125,8 @@
                 </Grid>
                 <!-- Versión nueva: al arrancar (como mucho una consulta a GitHub cada 24 h) o al momento con el enlace. -->
                 <StackPanel Orientation="Horizontal" Spacing="16">
+                    <CheckBox x:Name="SkipReviewBox" Content="Guardar sin revisar"
+                              ToolTipService.ToolTip="Guarda el archivo al terminar, sin pasar por la vista previa (como la cola de varios)" />
                     <CheckBox x:Name="UpdatesBox" Content="Avisar cuando haya una versión nueva" IsChecked="True" />
                     <HyperlinkButton x:Name="CheckUpdatesButton" Content="Buscar actualizaciones" Click="OnCheckUpdates" VerticalAlignment="Center" Padding="4,2"
                                      ToolTipService.ToolTip="Consulta ahora la última versión publicada en GitHub" />
@@ -199,7 +201,7 @@
                     </Viewbox>
                     <TextBlock Text="Aquí saldrán los subtítulos" Style="{StaticResource Seccion}" HorizontalAlignment="Center" Margin="0" />
                     <TextBlock TextWrapping="Wrap" TextAlignment="Center" Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="Suelta un video o un audio, elige el idioma y pulsa «Generar subtítulos» (Ctrl+Entrar). Podrás corregir cada bloque antes de guardarlo. Con varios archivos a la vez, cada uno se guarda al terminar." />
+                               Text="Suelta un video o un audio, elige el idioma y pulsa «Generar subtítulos» (Ctrl+Entrar). Podrás corregir cada bloque antes de guardarlo. Con varios archivos a la vez, o con «Guardar sin revisar», cada uno se guarda al terminar." />
                 </StackPanel>
             </Grid>
         </Border>

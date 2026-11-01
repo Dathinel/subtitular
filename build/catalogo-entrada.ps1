@@ -26,6 +26,11 @@ if (-not $Version) {
 if (-not $Salida) {
     $Salida = Join-Path $Raiz 'dist\catalogo-subtitular.json'
 }
+# Una -Salida relativa va contra $PWD, como -Zip: [System.IO.File]::WriteAllText la resolvería contra el directorio del proceso
+# (y Split-Path '' no da carpeta cuando es solo un nombre). Resolve-Path no sirve: el archivo aún no existe.
+if (-not [System.IO.Path]::IsPathRooted($Salida)) {
+    $Salida = Join-Path (Get-Location).ProviderPath $Salida
+}
 
 $dirSalida = Split-Path -Parent $Salida
 if (-not (Test-Path -LiteralPath $dirSalida)) {
