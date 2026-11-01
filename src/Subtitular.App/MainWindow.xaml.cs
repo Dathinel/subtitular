@@ -67,7 +67,7 @@ public sealed partial class MainWindow : Window
             {
                 new WindowPlacement(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height).Save(WindowPlacement.DefaultPath);
             }
-            CurrentPreferences().Save(Preferences.DefaultPath);
+            SavePreferences();
         };
         VersionText.Text = "Versión " + (typeof(App).Assembly.GetName().Version?.ToString(3) ?? "?") + " · Copyright (C) 2026 Dathinel";
         CueList.ItemsSource = _cues;
@@ -89,6 +89,16 @@ public sealed partial class MainWindow : Window
         SpeakBox.IsChecked = _prefs.Speak;
         OpenFolderBox.IsChecked = _prefs.OpenFolder;
         OutputDirBox.Text = _prefs.OutputDir ?? "";
+        // Se guardan al cambiar, no solo al cerrar: un apagón o un cierre forzado no las pierde.
+        LanguageBox.SelectionChanged += (_, _) => SavePreferences();
+        FormatBox.SelectionChanged += (_, _) => SavePreferences();
+        TranslateBox.SelectionChanged += (_, _) => SavePreferences();
+        OutputDirBox.TextChanged += (_, _) => SavePreferences();
+        foreach (CheckBox box in new[] { SpeakBox, OpenFolderBox })
+        {
+            box.Checked += (_, _) => SavePreferences();
+            box.Unchecked += (_, _) => SavePreferences();
+        }
         CompositionTarget.Rendering += OnFirstFrame;
     }
 
@@ -115,6 +125,8 @@ public sealed partial class MainWindow : Window
         int index = box.Items.ToList().FindIndex(i => (i as ComboBoxItem)?.Tag as string == tag);
         box.SelectedIndex = index >= 0 ? index : 0;
     }
+
+    private void SavePreferences() => CurrentPreferences().Save(Preferences.DefaultPath);
 
     private Preferences CurrentPreferences() => _prefs with
     {
@@ -195,6 +207,7 @@ public sealed partial class MainWindow : Window
         _files.Clear();
         _files.AddRange(valid);
         _prefs = _prefs with { LastInputDir = Path.GetDirectoryName(Path.GetFullPath(valid[0])) };
+        SavePreferences();
         _previewFile = null;
         _transcript = null;
         _cues.Clear();
