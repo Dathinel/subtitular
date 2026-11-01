@@ -12,6 +12,8 @@ public sealed record JobOptions(string InputFile)
     public string Format { get; init; } = "srt";
     /// <summary>Carpeta de salida; nula = junto al archivo de entrada.</summary>
     public string? OutputDir { get; init; }
+    /// <summary>Nombre base de las salidas; nulo = el del archivo de entrada. La cola lo usa para no pisar dos «clip.mp4».</summary>
+    public string? OutputName { get; init; }
     public string? TranslateTo { get; init; }
     public bool Speak { get; init; }
     public string Device { get; init; } = "auto";
@@ -85,7 +87,7 @@ public static class SubtitleJob
     {
         ArgumentNullException.ThrowIfNull(options);
         string dir = string.IsNullOrWhiteSpace(options.OutputDir) ? Path.GetDirectoryName(Path.GetFullPath(options.InputFile))! : options.OutputDir;
-        string name = Path.GetFileNameWithoutExtension(options.InputFile);
+        string name = options.OutputName ?? Path.GetFileNameWithoutExtension(options.InputFile);
         if (!string.IsNullOrWhiteSpace(options.TranslateTo))
         {
             name += "." + options.TranslateTo;

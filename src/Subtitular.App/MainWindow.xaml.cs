@@ -276,6 +276,7 @@ public sealed partial class MainWindow : Window
         {
             ShowPreview(ok.Options.InputFile, last);
         }
+        // Cancelar no tira lo ya guardado: el resumen dice cuántos salieron y en cuál se paró.
         Show(results.All(r => r.Ok) ? InfoBarSeverity.Success : InfoBarSeverity.Warning, JobBatch.Summary(results));
         OpenResultFolder([.. results.Where(r => r.Ok).SelectMany(r => new[] { r.Subtitles, r.Audio })]);
     }
@@ -325,12 +326,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>El progreso de un solo archivo, en la misma barra que la cola.</summary>
     private static IProgress<JobProgress> Single(IProgress<BatchProgress> progress, string file) =>
-        new Relay(p => progress.Report(new BatchProgress(0, 1, file, p)));
-
-    private sealed class Relay(Action<JobProgress> report) : IProgress<JobProgress>
-    {
-        public void Report(JobProgress value) => report(value);
-    }
+        new SyncProgress<JobProgress>(p => progress.Report(new BatchProgress(0, 1, file, p)));
 
     /// <summary>Corre una etapa con progreso y Cancelar; los errores previstos salen en la barra, en español.</summary>
     private async Task<T?> BusyAsync<T>(Func<IProgress<BatchProgress>, CancellationToken, Task<T>> work)
@@ -367,7 +363,10 @@ public sealed partial class MainWindow : Window
         try
         {
             T result = await work(progress, _cts.Token);
-            DoneStory.Begin();
+            if (!_cts.IsCancellationRequested)
+            {
+                DoneStory.Begin();
+            }
             return result;
         }
         catch (Exception ex)
