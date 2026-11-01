@@ -34,3 +34,14 @@ Lo que la CI no puede comprobar (la lógica tiene pruebas en `BatchTests` y `Pre
 3. **Cancelar en cola.** Con tres archivos, cancela durante el segundo: «Operación cancelada.» en menos de un segundo, el primero ya guardado, y en el Administrador de tareas no queda ningún `ffmpeg.exe` ni `Rodaje.Module.*.exe`.
 4. **Abrir la carpeta.** Con la casilla marcada, al guardar un archivo se abre el Explorador con el `.srt` seleccionado; con varios, se abre la carpeta. Desmarcada, no se abre nada.
 5. **Atajos.** `Ctrl+O` abre el diálogo de elegir; `Ctrl+Entrar` genera (y no hace nada mientras ya está generando o sin archivo). Con el foco dentro de un bloque de la vista previa, `Ctrl+Entrar` también debe generar y no meter un salto de línea.
+
+## Aviso de versión nueva
+
+La lógica (tag, comparación, 24 h, «Más tarde», Lanzador) tiene pruebas sin red en `UpdateCheckTests` y `LauncherTests`; esto es lo que solo se ve con la ventana y GitHub de verdad. Mientras la última release sea la 1.0.0 y esta compilación sea la 1.0.x, la franja no sale: para verla, baja `<Version>` en `Directory.Build.props` a `0.9.0` y publica.
+
+1. **Arranque sin franja.** Con la app al día, abre y cierra: no sale nada arriba, la ventana pinta igual de rápido y en `preferencias.json` queda `lastUpdateCheck` con la hora (UTC). Vuelve a abrir antes de 24 h: la hora no cambia (no consulta). Sin red (desconecta el wifi): arranca igual, sin aviso ni barra roja.
+2. **Franja.** Con una compilación `0.9.0`, al abrir debe salir arriba, encima de la cabecera, la franja con el borde del acento: «Subtitular 1.0.0 disponible», «Ver novedades», «Más tarde» y, solo si `%LOCALAPPDATA%\Dathinel\Lanzador\Lanzador.exe` existe (o `SUBTITULAR_LANZADOR` apunta a él), «Abrir el Lanzador». ¿Se ve discreta y en claro y oscuro? ¿Empuja el resto hacia abajo sin solaparse con «Acerca de»?
+3. **Ver novedades.** Abre en el navegador la página de la release (`github.com/Dathinel/subtitular/releases/tag/v1.0.0`). **Abrir el Lanzador** abre el Lanzador y la ventana sigue abierta.
+4. **Más tarde.** La franja se va y en `preferencias.json` queda `skippedVersion: "1.0.0"`. Cierra y abre pasadas 24 h (o borra `lastUpdateCheck` del archivo): no vuelve a salir. Cambia a mano `skippedVersion` a `0.9.5`: vuelve a salir.
+5. **Buscar actualizaciones.** En Ajustes, el enlace consulta al momento aunque no hayan pasado 24 h y aunque la versión esté descartada: con la `0.9.0`, sale la franja; con la app al día, la barra azul «No hay nada nuevo: Subtitular 1.0.0 es la última versión.»; sin red, la barra amarilla «No se pudo consultar…» (en menos de 6 s: el límite es de 5). Mientras consulta, el enlace queda apagado y la ventana responde.
+6. **Casilla.** Desmarca «Avisar cuando haya una versión nueva», cierra y abre: la casilla sigue desmarcada y `lastUpdateCheck` no cambia aunque hayan pasado 24 h; «Buscar actualizaciones» sigue funcionando.

@@ -42,6 +42,9 @@ public sealed partial class MainWindow : Window
     private Transcript? _transcript;
     private CancellationTokenSource? _cts;
     private Preferences _prefs;
+    /// <summary>La versión nueva que muestra la franja, y el Lanzador si está en el PC.</summary>
+    private ReleaseInfo? _release;
+    private string? _launcher;
 
     public MainWindow()
     {
@@ -88,6 +91,7 @@ public sealed partial class MainWindow : Window
         SelectTag(TranslateBox, _prefs.TranslateTo ?? "");
         SpeakBox.IsChecked = _prefs.Speak;
         OpenFolderBox.IsChecked = _prefs.OpenFolder;
+        UpdatesBox.IsChecked = _prefs.CheckUpdates;
         OutputDirBox.Text = _prefs.OutputDir ?? "";
         // Se guardan al cambiar, no solo al cerrar: un apagón o un cierre forzado no las pierde.
         LanguageBox.SelectionChanged += (_, _) => SavePreferences();
@@ -106,6 +110,96 @@ public sealed partial class MainWindow : Window
     {
         CompositionTarget.Rendering -= OnFirstFrame;
         Program.FirstFrame();
+        // Con la ventana ya pintada: la consulta a GitHub (si toca) no retrasa el arranque.
+        _ = GuardedAsync(() => CheckUpdatesAsync(manual: false));
+    }
+
+    private async void OnCheckUpdates(object sender, RoutedEventArgs e) => await GuardedAsync(() => CheckUpdatesAsync(manual: true));
+
+    /// <summary>
+    /// Al arrancar solo si el aviso está activado y pasaron 24 h desde la última consulta; con «Buscar actualizaciones», siempre.
+    /// La red va en el grupo de hilos; sin red o con respuesta rara, al arrancar no se dice nada.
+    /// </summary>
+    private async Task CheckUpdatesAsync(bool manual)
+    {
+        Preferences prefs = CurrentPreferences();
+        CheckUpdatesButton.IsEnabled = false;
+        UpdateCheckResult result;
+        try
+        {
+            result = await Task.Run(() => UpdateCheck.CheckAsync(prefs, UpdateCheck.AppVersion, new GitHubReleaseFeed(), DateTimeOffset.UtcNow, manual, CancellationToken.None));
+        }
+        finally
+        {
+            CheckUpdatesButton.IsEnabled = true;
+        }
+        if (result.Outcome == UpdateOutcome.NotDue)
+        {
+            return;
+        }
+        _prefs = result.Preferences;
+        _prefs.Save(Preferences.DefaultPath);
+        switch (result.Outcome)
+        {
+            case UpdateOutcome.NewVersion:
+                ShowUpdate(result.Release!);
+                break;
+            case UpdateOutcome.UpToDate when manual:
+                Show(InfoBarSeverity.Informational, $"No hay nada nuevo: Subtitular {UpdateCheck.AppVersion.ToString(3)} es la última versión.");
+                break;
+            case UpdateOutcome.Failed when manual:
+                Show(InfoBarSeverity.Warning, "No se pudo consultar si hay una versión nueva. Comprueba la conexión y vuelve a intentarlo.");
+                break;
+        }
+    }
+
+    private void ShowUpdate(ReleaseInfo release)
+    {
+        _release = release;
+        _launcher = Launcher.Find();
+        UpdateText.Text = $"Subtitular {release.Version.ToString(3)} disponible";
+        OpenLauncherButton.Visibility = _launcher is null ? Visibility.Collapsed : Visibility.Visible;
+        UpdateStrip.Visibility = Visibility.Visible;
+    }
+
+    private void OnViewRelease(object sender, RoutedEventArgs e)
+    {
+        if (_release is not null)
+        {
+            OpenExternal(_release.Url);
+        }
+    }
+
+    private void OnOpenLauncher(object sender, RoutedEventArgs e)
+    {
+        if (_launcher is not null)
+        {
+            OpenExternal(_launcher);
+        }
+    }
+
+    /// <summary>«Más tarde»: la franja se va y no se vuelve a avisar de esa versión (sí de la siguiente, y sí con «Buscar actualizaciones»).</summary>
+    private void OnUpdateLater(object sender, RoutedEventArgs e)
+    {
+        if (_release is not null)
+        {
+            _prefs = UpdateCheck.Dismiss(CurrentPreferences(), _release);
+            _prefs.Save(Preferences.DefaultPath);
+        }
+        UpdateStrip.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>Abre una página en el navegador o un programa por el shell; si no se puede, lo dice la barra.</summary>
+    private void OpenExternal(string target)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(target) { UseShellExecute = true })?.Dispose();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or System.IO.FileNotFoundException)
+        {
+            ShowError($"No se pudo abrir «{target}»: {ex.Message}");
+        }
     }
 
     public void ShowError(string message) => Show(InfoBarSeverity.Error, message);
@@ -136,6 +230,7 @@ public sealed partial class MainWindow : Window
         TranslateTo = Tag(TranslateBox) is { Length: > 0 } t ? t : null,
         Speak = SpeakBox.IsChecked == true,
         OpenFolder = OpenFolderBox.IsChecked == true,
+        CheckUpdates = UpdatesBox.IsChecked == true,
     };
 
     private void OnDragOver(object sender, DragEventArgs e) =>
