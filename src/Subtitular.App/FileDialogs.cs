@@ -25,9 +25,6 @@ internal static unsafe class FileDialogs
     public static readonly (string Name, string Spec) AllFilter =
         ("Todos los archivos", "*.*");
 
-    public static string? OpenSingle(nint owner, string title, params (string Name, string Spec)[] filters) =>
-        OpenMany(owner, title, null, false, filters).FirstOrDefault();
-
     /// <summary>Uno o varios archivos (Ctrl o Mayús en el diálogo); vacío si se cancela. Empieza en <paramref name="initialDir"/> si existe.</summary>
     public static IReadOnlyList<string> OpenMany(nint owner, string title, string? initialDir, bool multi, params (string Name, string Spec)[] filters)
     {

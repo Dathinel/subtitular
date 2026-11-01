@@ -39,6 +39,8 @@ if (-not $Zip) {
 if (-not (Test-Path -LiteralPath $Zip)) {
     throw "No se encontró el archivo zip de distribución: $Zip (corre antes build\distribuir.ps1)."
 }
+# Las clases de .NET resuelven una ruta relativa contra el directorio del proceso, no contra $PWD como Test-Path.
+$Zip = (Resolve-Path -LiteralPath $Zip).Path
 
 # Huella con las clases de .NET y no con Get-FileHash: en Windows PowerShell 5.1 es una función de script de
 # Microsoft.PowerShell.Utility que solo existe si PSModulePath apunta a $PSHOME\Modules, y un proceso lanzado

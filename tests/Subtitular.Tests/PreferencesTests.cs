@@ -5,7 +5,7 @@ namespace Subtitular.Tests;
 public sealed class PreferencesTests
 {
     [Fact]
-    public void Preferences_roundtrip_and_forget_missing_folders_and_broken_files()
+    public void Preferences_roundtrip_keep_missing_folders_and_survive_broken_files()
     {
         string dir = Path.Combine(Path.GetTempPath(), "subtitular-prefs-" + Guid.NewGuid().ToString("N"));
         string path = Path.Combine(dir, "preferencias.json");
@@ -28,12 +28,12 @@ public sealed class PreferencesTests
             chosen.Save(path);
             Assert.Equal(chosen, Preferences.Load(path));
 
-            // Una carpeta que ya no existe no se recuerda; un formato o idioma raros vuelven a los de fábrica.
+            // Una carpeta que no existe ahora (disco desconectado) se conserva; un formato o idioma raros vuelven a los de fábrica.
             string gone = Path.Combine(dir, "borrada");
             new Preferences { LastInputDir = gone, OutputDir = gone, Language = " ", Format = "ass", TranslateTo = "", SkippedVersion = " " }.Save(path);
             Preferences loaded = Preferences.Load(path);
-            Assert.Null(loaded.LastInputDir);
-            Assert.Null(loaded.OutputDir);
+            Assert.Equal(gone, loaded.LastInputDir);
+            Assert.Equal(gone, loaded.OutputDir);
             Assert.Equal("auto", loaded.Language);
             Assert.Equal("srt", loaded.Format);
             Assert.Null(loaded.TranslateTo);

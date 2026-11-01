@@ -70,7 +70,7 @@ public sealed partial class MainWindow : Window
             {
                 new WindowPlacement(AppWindow.Position.X, AppWindow.Position.Y, AppWindow.Size.Width, AppWindow.Size.Height).Save(WindowPlacement.DefaultPath);
             }
-            CurrentPreferences().Save(Preferences.DefaultPath);
+            SavePreferences();
         };
         VersionText.Text = "Versión " + (typeof(App).Assembly.GetName().Version?.ToString(3) ?? "?") + " · Copyright (C) 2026 Dathinel";
         CueList.ItemsSource = _cues;
@@ -93,6 +93,16 @@ public sealed partial class MainWindow : Window
         OpenFolderBox.IsChecked = _prefs.OpenFolder;
         UpdatesBox.IsChecked = _prefs.CheckUpdates;
         OutputDirBox.Text = _prefs.OutputDir ?? "";
+        // Se guardan al cambiar, no solo al cerrar: un apagón o un cierre forzado no las pierde.
+        LanguageBox.SelectionChanged += (_, _) => SavePreferences();
+        FormatBox.SelectionChanged += (_, _) => SavePreferences();
+        TranslateBox.SelectionChanged += (_, _) => SavePreferences();
+        OutputDirBox.TextChanged += (_, _) => SavePreferences();
+        foreach (CheckBox box in new[] { SpeakBox, OpenFolderBox })
+        {
+            box.Checked += (_, _) => SavePreferences();
+            box.Unchecked += (_, _) => SavePreferences();
+        }
         CompositionTarget.Rendering += OnFirstFrame;
     }
 
@@ -210,6 +220,8 @@ public sealed partial class MainWindow : Window
         box.SelectedIndex = index >= 0 ? index : 0;
     }
 
+    private void SavePreferences() => CurrentPreferences().Save(Preferences.DefaultPath);
+
     private Preferences CurrentPreferences() => _prefs with
     {
         OutputDir = string.IsNullOrWhiteSpace(OutputDirBox.Text) ? null : OutputDirBox.Text,
@@ -290,6 +302,7 @@ public sealed partial class MainWindow : Window
         _files.Clear();
         _files.AddRange(valid);
         _prefs = _prefs with { LastInputDir = Path.GetDirectoryName(Path.GetFullPath(valid[0])) };
+        SavePreferences();
         _previewFile = null;
         _transcript = null;
         _cues.Clear();
@@ -371,6 +384,7 @@ public sealed partial class MainWindow : Window
         {
             ShowPreview(ok.Options.InputFile, last);
         }
+        // Cancelar no tira lo ya guardado: el resumen dice cuántos salieron y en cuál se paró.
         Show(results.All(r => r.Ok) ? InfoBarSeverity.Success : InfoBarSeverity.Warning, JobBatch.Summary(results));
         OpenResultFolder([.. results.Where(r => r.Ok).SelectMany(r => new[] { r.Subtitles, r.Audio })]);
     }
@@ -420,12 +434,7 @@ public sealed partial class MainWindow : Window
 
     /// <summary>El progreso de un solo archivo, en la misma barra que la cola.</summary>
     private static IProgress<JobProgress> Single(IProgress<BatchProgress> progress, string file) =>
-        new Relay(p => progress.Report(new BatchProgress(0, 1, file, p)));
-
-    private sealed class Relay(Action<JobProgress> report) : IProgress<JobProgress>
-    {
-        public void Report(JobProgress value) => report(value);
-    }
+        new SyncProgress<JobProgress>(p => progress.Report(new BatchProgress(0, 1, file, p)));
 
     /// <summary>Corre una etapa con progreso y Cancelar; los errores previstos salen en la barra, en español.</summary>
     private async Task<T?> BusyAsync<T>(Func<IProgress<BatchProgress>, CancellationToken, Task<T>> work)
@@ -462,7 +471,10 @@ public sealed partial class MainWindow : Window
         try
         {
             T result = await work(progress, _cts.Token);
-            DoneStory.Begin();
+            if (!_cts.IsCancellationRequested)
+            {
+                DoneStory.Begin();
+            }
             return result;
         }
         catch (Exception ex)

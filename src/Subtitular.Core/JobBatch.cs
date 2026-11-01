@@ -16,10 +16,10 @@ public readonly record struct BatchProgress(int Index, int Count, string InputFi
     }
 }
 
-/// <summary>Cómo acabó un archivo de la cola: sus salidas o su error (en español si era previsto).</summary>
-public sealed record BatchResult(JobOptions Options, Transcript? Transcript, string? Subtitles, string? Audio, string? Error)
+/// <summary>Cómo acabó un archivo de la cola: sus salidas, su error (en español si era previsto) o que se canceló antes de terminar.</summary>
+public sealed record BatchResult(JobOptions Options, Transcript? Transcript, string? Subtitles, string? Audio, string? Error, bool Cancelled = false)
 {
-    public bool Ok => Error is null;
+    public bool Ok => Error is null && !Cancelled;
 }
 
 /// <summary>Varios archivos uno tras otro, con los mismos ajustes; cada uno se guarda al terminar.</summary>
@@ -38,24 +38,48 @@ public static class JobBatch
     }
 
     /// <summary>
-    /// Procesa los archivos en orden. Un archivo que falla no para a los demás: queda con su error en el resultado.
-    /// Cancelar sí para la cola: el archivo en curso suelta su ffmpeg y su módulo (los matan sus propios
-    /// <c>CancellationToken</c>) y se lanza <see cref="OperationCanceledException"/>.
+    /// La cola sin repetidos (misma ruta completa) y sin que dos trabajos escriban la misma salida: el segundo «clip.mp4»
+    /// de otra carpeta con la carpeta de salida fijada pasa a «clip-2», el tercero a «clip-3».
+    /// </summary>
+    public static IReadOnlyList<JobOptions> Prepare(IReadOnlyList<JobOptions> jobs)
+    {
+        ArgumentNullException.ThrowIfNull(jobs);
+        List<JobOptions> unique = [.. jobs.DistinctBy(j => Path.GetFullPath(j.InputFile), StringComparer.OrdinalIgnoreCase)];
+        HashSet<string> outputs = new(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < unique.Count; i++)
+        {
+            string name = Path.GetFileNameWithoutExtension(unique[i].InputFile);
+            for (int n = 2; !outputs.Add(SubtitleJob.OutputPath(unique[i], "")); n++)
+            {
+                unique[i] = unique[i] with { OutputName = $"{name}-{n}" };
+            }
+        }
+        return unique;
+    }
+
+    /// <summary>
+    /// Procesa los archivos en orden (tras <see cref="Prepare"/>). Un archivo que falla no para a los demás: queda con su error en el resultado.
+    /// Cancelar sí para la cola: el archivo en curso suelta su ffmpeg y su módulo (los matan sus propios <c>CancellationToken</c>)
+    /// y vuelve, con los que faltaban, marcado <see cref="BatchResult.Cancelled"/>; lo ya guardado se devuelve igual.
     /// </summary>
     public static async Task<IReadOnlyList<BatchResult>> RunAsync(IReadOnlyList<JobOptions> jobs, IProgress<BatchProgress>? progress = null,
         CancellationToken cancellationToken = default, Worker? worker = null)
     {
-        ArgumentNullException.ThrowIfNull(jobs);
+        jobs = Prepare(jobs);
         worker ??= RunAndSaveAsync;
         List<BatchResult> results = new(jobs.Count);
         for (int i = 0; i < jobs.Count; i++)
         {
-            cancellationToken.ThrowIfCancellationRequested();
             JobOptions options = jobs[i];
+            if (cancellationToken.IsCancellationRequested)
+            {
+                results.Add(new BatchResult(options, null, null, null, null, Cancelled: true));
+                continue;
+            }
             int index = i;
             progress?.Report(new BatchProgress(index, jobs.Count, options.InputFile, null));
             // Relevo síncrono (no Progress<T>, que encola): el de fuera ya lleva cada aviso a su hilo.
-            Relay stage = new(p => progress?.Report(new BatchProgress(index, jobs.Count, options.InputFile, p)));
+            SyncProgress<JobProgress> stage = new(p => progress?.Report(new BatchProgress(index, jobs.Count, options.InputFile, p)));
             try
             {
                 (Transcript transcript, string subtitles, string? audio) = await worker(options, stage, cancellationToken).ConfigureAwait(false);
@@ -63,7 +87,7 @@ public static class JobBatch
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                throw;
+                results.Add(new BatchResult(options, null, null, null, null, Cancelled: true));
             }
             catch (Exception ex)
             {
@@ -73,20 +97,26 @@ public static class JobBatch
         return results;
     }
 
-    private sealed class Relay(Action<JobProgress> report) : IProgress<JobProgress>
-    {
-        public void Report(JobProgress value) => report(value);
-    }
-
-    /// <summary>Resumen para la barra: «5 archivos listos» o «3 archivos listos, 2 con error: a.mp4, b.mkv».</summary>
+    /// <summary>
+    /// Resumen para la barra: «5 archivos listos», «3 archivos listos, 2 con error: a.mp4, b.mkv» o, si se canceló,
+    /// «3 de 5 listos, cancelado en d.mp4».
+    /// </summary>
     public static string Summary(IReadOnlyList<BatchResult> results)
     {
         ArgumentNullException.ThrowIfNull(results);
         int ok = results.Count(r => r.Ok);
-        string listos = ok == 1 ? "1 archivo listo" : $"{ok} archivos listos";
-        List<string> failed = [.. results.Where(r => !r.Ok).Select(r => Path.GetFileName(r.Options.InputFile))];
-        return failed.Count == 0 ? listos : $"{listos}, {failed.Count} con error: {string.Join(", ", failed)}";
+        string ready = results.FirstOrDefault(r => r.Cancelled) is { } cancelled
+            ? $"{ok} de {results.Count} listos, cancelado en {Path.GetFileName(cancelled.Options.InputFile)}"
+            : ok == 1 ? "1 archivo listo" : $"{ok} archivos listos";
+        List<string> failed = [.. results.Where(r => r.Error is not null).Select(r => Path.GetFileName(r.Options.InputFile))];
+        return failed.Count == 0 ? ready : $"{ready}, {failed.Count} con error: {string.Join(", ", failed)}";
     }
+}
+
+/// <summary>Avisa en el mismo hilo (no <see cref="Progress{T}"/>, que encola): quien lo recibe ya lleva cada aviso a su hilo.</summary>
+public sealed class SyncProgress<T>(Action<T> report) : IProgress<T>
+{
+    public void Report(T value) => report(value);
 }
 
 /// <summary>Dónde quedó el resultado, para abrirlo en el Explorador al terminar.</summary>

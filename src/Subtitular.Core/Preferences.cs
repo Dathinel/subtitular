@@ -24,7 +24,10 @@ public sealed record Preferences(
     public static string DefaultPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Dathinel", "Subtitular", "preferencias.json");
 
-    /// <summary>Las guardadas, o las de fábrica si no hay archivo o está roto. Las carpetas que ya no existen se olvidan.</summary>
+    /// <summary>
+    /// Las guardadas, o las de fábrica si no hay archivo o está roto. Una carpeta que no exista en este arranque (disco externo o
+    /// de red desconectado) se conserva: el diálogo ya cae a la carpeta de siempre si no está.
+    /// </summary>
     public static Preferences Load(string path)
     {
         Preferences p;
@@ -38,16 +41,14 @@ public sealed record Preferences(
         }
         return p with
         {
-            LastInputDir = ExistingDir(p.LastInputDir),
-            OutputDir = ExistingDir(p.OutputDir),
+            LastInputDir = string.IsNullOrWhiteSpace(p.LastInputDir) ? null : p.LastInputDir,
+            OutputDir = string.IsNullOrWhiteSpace(p.OutputDir) ? null : p.OutputDir,
             Language = string.IsNullOrWhiteSpace(p.Language) ? "auto" : p.Language,
             Format = p.Format is "srt" or "vtt" ? p.Format : "srt",
             TranslateTo = string.IsNullOrWhiteSpace(p.TranslateTo) ? null : p.TranslateTo,
             SkippedVersion = string.IsNullOrWhiteSpace(p.SkippedVersion) ? null : p.SkippedVersion,
         };
     }
-
-    private static string? ExistingDir(string? dir) => !string.IsNullOrWhiteSpace(dir) && Directory.Exists(dir) ? dir : null;
 
     /// <summary>Si no se puede escribir (disco lleno, permisos) se pierde el recuerdo, no la sesión.</summary>
     public void Save(string path)

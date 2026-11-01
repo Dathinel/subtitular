@@ -64,8 +64,45 @@ public sealed class BatchTests
             await Task.Delay(Timeout.Infinite, token);
             return (Empty, "", null);
         });
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => run);
+        IReadOnlyList<BatchResult> results = await run;
         Assert.Equal(1, started);
+        Assert.All(results, r => Assert.True(r.Cancelled && !r.Ok));
+        Assert.Equal("0 de 2 listos, cancelado en a.mp4", JobBatch.Summary(results));
+    }
+
+    [Fact]
+    public async Task Cancel_keeps_the_files_already_saved()
+    {
+        using CancellationTokenSource cts = new();
+        IReadOnlyList<BatchResult> results = await JobBatch.RunAsync([Job("a.mp4"), Job("b.mp4"), Job("c.mp4")], null, cts.Token, (o, _, token) =>
+        {
+            if (o.InputFile.EndsWith("b.mp4", StringComparison.Ordinal))
+            {
+                cts.Cancel();
+                token.ThrowIfCancellationRequested();
+            }
+            return Task.FromResult((Empty, SubtitleJob.OutputPath(o, ".srt"), (string?)null));
+        });
+        Assert.Equal([true, false, false], results.Select(r => r.Ok));
+        Assert.Equal(Path.Combine(Path.GetTempPath(), "a.srt"), results[0].Subtitles);
+        Assert.Equal("1 de 3 listos, cancelado en b.mp4", JobBatch.Summary(results));
+    }
+
+    [Fact]
+    public void Prepare_drops_repeated_inputs_and_renames_outputs_that_collide()
+    {
+        string outDir = Path.Combine(Path.GetTempPath(), "subs");
+        JobOptions a = new(Path.Combine(Path.GetTempPath(), "a", "clip.mp4")) { OutputDir = outDir };
+        JobOptions b = new(Path.Combine(Path.GetTempPath(), "b", "clip.mp4")) { OutputDir = outDir };
+        JobOptions c = new(Path.Combine(Path.GetTempPath(), "c", "clip.mkv")) { OutputDir = outDir };
+        IReadOnlyList<JobOptions> prepared = JobBatch.Prepare([a, a with { Format = "vtt" }, b, c]);
+
+        Assert.Equal(3, prepared.Count);
+        Assert.Equal(Path.Combine(outDir, "clip.srt"), SubtitleJob.OutputPath(prepared[0], ".srt"));
+        Assert.Equal(Path.Combine(outDir, "clip-2.srt"), SubtitleJob.OutputPath(prepared[1], ".srt"));
+        Assert.Equal(Path.Combine(outDir, "clip-3.srt"), SubtitleJob.OutputPath(prepared[2], ".srt"));
+        // Junto al video no chocan: cada uno queda en su carpeta con su nombre.
+        Assert.All(JobBatch.Prepare([a with { OutputDir = null }, b with { OutputDir = null }]), j => Assert.Null(j.OutputName));
     }
 
     [Fact]
