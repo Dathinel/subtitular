@@ -27,8 +27,8 @@ public static class SpeechSynthesizer
     }
 
     /// <summary>
-    /// Si la voz leería lo mismo: el mismo idioma y las mismas palabras, segmento a segmento, sin contar los vacíos ni los espacios
-    /// de más. Los cortes de bloque no cuentan: una corrección de texto en la vista previa sí.
+    /// Si la voz leería lo mismo: el mismo idioma y las mismas palabras con distinción de mayúsculas y puntuación (ya que la puntuación cambia la entonación).
+    /// Los cortes de bloque y espacios no cuentan; una corrección de texto en la vista previa sí.
     /// </summary>
     public static bool SameSpeech(Transcript a, Transcript b)
     {

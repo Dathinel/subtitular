@@ -299,7 +299,9 @@ public sealed partial class MainWindow : Window
             return;
         }
         Notice.IsOpen = false;
-        MediaSelection selection = MediaInfo.Select(paths);
+        MediaSelection selection = paths.Any(Directory.Exists)
+            ? await Task.Run(() => MediaInfo.Select(paths))
+            : MediaInfo.Select(paths);
         if (selection.Warning is { } warning)
         {
             ShowError(warning);

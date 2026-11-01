@@ -6,6 +6,9 @@ namespace Subtitular.Core;
 /// </summary>
 internal static class JsonFile
 {
+    private const int MaxRetries = 10;
+    private const int RetryDelayMs = 50;
+
     /// <summary>Si no se puede escribir (disco lleno, permisos) se pierde el recuerdo, no la sesión: devuelve falso y no lanza.</summary>
     public static bool Write(string path, byte[] bytes)
     {
@@ -14,8 +17,18 @@ internal static class JsonFile
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllBytes(temp, bytes);
-            File.Move(temp, path, overwrite: true);
-            return true;
+            for (int attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    File.Move(temp, path, overwrite: true);
+                    return true;
+                }
+                catch (Exception moveEx) when (attempt < MaxRetries && moveEx is IOException or UnauthorizedAccessException)
+                {
+                    Thread.Sleep(RetryDelayMs);
+                }
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

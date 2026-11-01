@@ -56,6 +56,11 @@ public sealed class SpeechTests
         Assert.False(SpeechSynthesizer.SameSpeech(spoken, reviewed with { Language = "en" }));
         Assert.False(SpeechSynthesizer.SameSpeech(spoken, new Transcript("es", "cpu", [new TranscriptSegment(0, 2, "Hola a todas."), reviewed.Segments[1]])));
         Assert.False(SpeechSynthesizer.SameSpeech(spoken, new Transcript("es", "cpu", [reviewed.Segments[0]])));
+
+        // La puntuación cambia la entonación y las mayúsculas importan: «Hola.» vs «hola» genera voz distinta.
+        Transcript punct = new("es", "cpu", [new TranscriptSegment(0, 2, "Hola.")]);
+        Transcript noPunct = new("es", "cpu", [new TranscriptSegment(0, 2, "hola")]);
+        Assert.False(SpeechSynthesizer.SameSpeech(punct, noPunct));
     }
 
     [Fact]
