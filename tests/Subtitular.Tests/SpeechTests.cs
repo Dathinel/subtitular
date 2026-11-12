@@ -109,4 +109,117 @@ public sealed class SpeechTests
         SubtitularUserException ex = Assert.Throws<SubtitularUserException>(() => SpeechSynthesizer.VoiceLanguage("fr"));
         Assert.Contains("fr", ex.Message, StringComparison.Ordinal);
     }
+
+    [Theory]
+    [InlineData("Hola mundo", "Hola mundo", true)]
+    [InlineData("Hola mundo", "Hola   mundo", true)]
+    [InlineData("Hola mundo", "  Hola mundo  ", true)]
+    [InlineData("Hola mundo", "Hola\t\r\nmundo", true)]
+    [InlineData("Hola.", "Hola", false)]
+    [InlineData("Hola!", "Hola?", false)]
+    [InlineData("Hola, mundo", "Hola mundo", false)]
+    [InlineData("Hola mundo", "hola mundo", false)]
+    [InlineData("HOLA MUNDO", "Hola Mundo", false)]
+    [InlineData("«Hola»", "Hola", false)]
+    public void SameSpeech_table_of_pairs_matching_behavior(string textA, string textB, bool expected)
+    {
+        Transcript a = new("es", "cpu", [new TranscriptSegment(0, 2, textA)]);
+        Transcript b = new("es", "cpu", [new TranscriptSegment(0, 2, textB)]);
+        Assert.Equal(expected, SpeechSynthesizer.SameSpeech(a, b));
+    }
+
+    [Fact]
+    public void SameSpeech_table_of_pairs_for_segment_structures()
+    {
+        Transcript single = new("es", "cpu", [new TranscriptSegment(0, 4, "Uno dos tres cuatro")]);
+        Transcript two = new("es", "cpu", [new TranscriptSegment(0, 2, "Uno dos"), new TranscriptSegment(2, 4, "tres cuatro")]);
+        Transcript three = new("es", "cpu", [new TranscriptSegment(0, 1, "Uno"), new TranscriptSegment(1, 2, "dos tres"), new TranscriptSegment(2, 4, "cuatro")]);
+        Transcript withEmpties = new("es", "cpu", [new TranscriptSegment(0, 1, "Uno dos"), new TranscriptSegment(1, 2, "   "), new TranscriptSegment(2, 3, ""), new TranscriptSegment(3, 4, "tres cuatro")]);
+
+        Assert.True(SpeechSynthesizer.SameSpeech(single, two));
+        Assert.True(SpeechSynthesizer.SameSpeech(single, three));
+        Assert.True(SpeechSynthesizer.SameSpeech(single, withEmpties));
+
+        Transcript empty1 = new("es", "cpu", []);
+        Transcript empty2 = new("es", "cpu", []);
+        Transcript emptyWhitespace = new("es", "cpu", [new TranscriptSegment(0, 1, "   "), new TranscriptSegment(1, 2, "")]);
+
+        Assert.True(SpeechSynthesizer.SameSpeech(empty1, empty2));
+        Assert.True(SpeechSynthesizer.SameSpeech(empty1, emptyWhitespace));
+        Assert.False(SpeechSynthesizer.SameSpeech(empty1, single));
+    }
+
+    [Theory]
+    [InlineData("es", "es", true)]
+    [InlineData("es", "ES", true)]
+    [InlineData("ES", "es", true)]
+    [InlineData("en-US", "en-us", true)]
+    [InlineData("pt-BR", "pt-br", true)]
+    [InlineData("es", "en", false)]
+    [InlineData("es", "pt", false)]
+    public void SameSpeech_language_comparison_rules(string langA, string langB, bool expected)
+    {
+        Transcript a = new(langA, "cpu", [new TranscriptSegment(0, 2, "Mismo texto")]);
+        Transcript b = new(langB, "cpu", [new TranscriptSegment(0, 2, "Mismo texto")]);
+        Assert.Equal(expected, SpeechSynthesizer.SameSpeech(a, b));
+    }
+
+    [Fact]
+    public void SameSpeech_throws_on_null_arguments()
+    {
+        Transcript valid = new("es", "cpu", [new TranscriptSegment(0, 2, "Texto")]);
+        Assert.Throws<ArgumentNullException>(() => SpeechSynthesizer.SameSpeech(null!, valid));
+        Assert.Throws<ArgumentNullException>(() => SpeechSynthesizer.SameSpeech(valid, null!));
+    }
+
+    [Theory]
+    [InlineData("es", "es")]
+    [InlineData("es-419", "es")]
+    [InlineData("spanish", "es")]
+    [InlineData("SPANISH", "es")]
+    [InlineData("pt", "pt-BR")]
+    [InlineData("pt-br", "pt-BR")]
+    [InlineData("pt-pt", "pt-BR")]
+    [InlineData("portuguese", "pt-BR")]
+    [InlineData("en", "en-US")]
+    [InlineData("en-us", "en-US")]
+    [InlineData("english", "en-US")]
+    [InlineData("en-gb", "en-GB")]
+    [InlineData("EN-GB", "en-GB")]
+    public void VoiceLanguage_mappings_all_supported_variants(string inputLang, string expectedVoice)
+    {
+        Assert.Equal(expectedVoice, SpeechSynthesizer.VoiceLanguage(inputLang));
+    }
+
+    [Theory]
+    [InlineData("fr")]
+    [InlineData("de")]
+    [InlineData("it")]
+    [InlineData("ja")]
+    [InlineData("zh")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void VoiceLanguage_rejects_unsupported_languages_with_clear_message(string? unsupported)
+    {
+        SubtitularUserException ex = Assert.Throws<SubtitularUserException>(() => SpeechSynthesizer.VoiceLanguage(unsupported));
+        Assert.Contains("La voz solo lee español, portugués e inglés", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Lay_edge_cases_empty_clips_negative_time_and_zero_samples()
+    {
+        Assert.Empty(SpeechSynthesizer.Lay([], 16000));
+
+        // Inicio negativo se recorta a muestra 0
+        float[] clip = [0.5f, 0.5f];
+        float[] timeline = SpeechSynthesizer.Lay([(-2.0, clip)], 10);
+        Assert.Equal(2, timeline.Length);
+        Assert.Equal([0.5f, 0.5f], timeline);
+
+        // Clip vacío
+        float[] emptyTimeline = SpeechSynthesizer.Lay([(1.0, [])], 10);
+        Assert.Equal(10, emptyTimeline.Length); // cursor en 1.0 s = 10 muestras de ceros
+        Assert.All(emptyTimeline, s => Assert.Equal(0f, s));
+    }
 }
