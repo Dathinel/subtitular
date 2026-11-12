@@ -21,6 +21,7 @@
 - Un segmento cuyas palabras con tiempo llegaban todas vacías se quedaba sin subtítulo aunque tuviera texto; ahora se reparte el texto del segmento.
 - Un salto de línea dentro de una palabra del módulo dejaba una línea en blanco en mitad del bloque y rompía el SRT; los espacios y saltos interiores se reducen a un espacio.
 - El tiempo transcurrido y el «quedan ~» daban la vuelta al pasar de 24 h (25 h salía como «1:00:00»); ahora las horas siguen contando.
+- Un bloque de menos de un milisegundo (palabras con tiempos casi iguales) se escribía con el mismo tiempo de inicio y de fin, y el reproductor no lo mostraba; ahora dura 100 ms como los de duración cero.
 - Tras una cola (o con «Guardar sin revisar»), pulsar Guardar con «Leer en voz alta» volvía a generar el WAV aunque el texto no hubiera cambiado; ahora solo lo regenera si cambió alguna palabra (o el idioma), no por los cortes de bloque de la vista previa.
 - `build\catalogo-entrada.ps1` con una `-Salida` relativa la escribía contra el directorio del proceso y no contra el actual.
 - La CI de `main` fallaba en `CatalogoEntradaTests`: `build\catalogo-entrada.ps1` dependía de `Get-FileHash`, que en Windows PowerShell 5.1 no existe si el proceso hereda un `PSModulePath` ajeno (el del host de pruebas lanzado desde pwsh). La huella se calcula ahora con las clases de .NET.

@@ -479,6 +479,21 @@ public sealed class SubtitleWriterTests
     }
 
     [Fact]
+    public void Cues_shorter_than_a_millisecond_are_not_written_with_the_same_start_and_end()
+    {
+        Transcript transcript = new("es", "cpu",
+        [
+            new TranscriptSegment(1.0001, 1.0004, "uno", [new TranscriptWord(1.0001, 1.0004, "uno")]),
+            new TranscriptSegment(1.0005, 1.0009, "dos", [new TranscriptWord(1.0005, 1.0009, "dos")]),
+        ]);
+
+        List<(TimeSpan Start, TimeSpan End, string[] Text)> blocks = ParseSrt(SubtitleWriter.ToSrt(transcript));
+
+        Assert.Equal([(1000, 1100), (1100, 1200)], blocks.Select(b => ((int)b.Start.TotalMilliseconds, (int)b.End.TotalMilliseconds)));
+        Assert.Contains("00:00:01.000 --> 00:00:01.100", SubtitleWriter.ToVtt(transcript), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Segment_whose_timed_words_are_all_blank_keeps_its_text()
     {
         Transcript transcript = new("es", "cpu",

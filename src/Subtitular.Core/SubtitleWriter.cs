@@ -85,7 +85,8 @@ public static class SubtitleWriter
                 {
                     start = lastCueEnd;
                 }
-                if (end <= start)
+                // Menos de un milisegundo se escribiría con el mismo tiempo de inicio y de fin.
+                if (end - start < TimeSpan.FromMilliseconds(1))
                 {
                     end = start + TimeSpan.FromMilliseconds(100);
                 }
