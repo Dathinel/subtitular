@@ -39,8 +39,9 @@ public static class SubtitleWriter
                 continue;
             }
 
-            IReadOnlyList<TranscriptWord> words = segment.Words is { Count: > 0 } w
-                ? ExpandLongWords(w)
+            // Si las palabras con tiempo vienen todas vacías, el texto del segmento no se pierde: se reparte.
+            IReadOnlyList<TranscriptWord> words = segment.Words is { Count: > 0 } w && ExpandLongWords(w) is { Count: > 0 } timed
+                ? timed
                 : SynthesizeWords(segment);
 
             if (words.Count == 0)
@@ -227,7 +228,8 @@ public static class SubtitleWriter
         List<TranscriptWord> result = new(words.Count);
         foreach (TranscriptWord w in words)
         {
-            string clean = w.Text.Trim();
+            // Un salto de línea dentro de una palabra dejaría una línea en blanco en mitad del bloque y rompería el SRT.
+            string clean = string.Join(' ', w.Text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
             if (clean.Length == 0)
             {
                 continue;
@@ -241,11 +243,8 @@ public static class SubtitleWriter
             {
                 // Parte palabras que superan 42 caracteres
                 double duration = Math.Max(0.01, w.End - w.Start);
-                int pieces = (clean.Length + MaxLineLength - 1) / MaxLineLength;
-                for (int i = 0; i < pieces; i++)
+                foreach ((int startChar, int len) in Chunks(clean))
                 {
-                    int startChar = i * MaxLineLength;
-                    int len = Math.Min(MaxLineLength, clean.Length - startChar);
                     string part = clean.Substring(startChar, len);
                     double partStart = w.Start + (duration * startChar / clean.Length);
                     double partEnd = w.Start + (duration * (startChar + len) / clean.Length);
@@ -254,6 +253,21 @@ public static class SubtitleWriter
             }
         }
         return result;
+    }
+
+    /// <summary>Trozos de como máximo 42 caracteres; el corte no cae en mitad de un par sustituto (emoji, CJK extendido), que saldría como «�».</summary>
+    private static IEnumerable<(int Start, int Length)> Chunks(string token)
+    {
+        for (int start = 0; start < token.Length;)
+        {
+            int length = Math.Min(MaxLineLength, token.Length - start);
+            if (start + length < token.Length && char.IsSurrogatePair(token, start + length - 1))
+            {
+                length--;
+            }
+            yield return (start, length);
+            start += length;
+        }
     }
 
     private static IReadOnlyList<TranscriptWord> SynthesizeWords(TranscriptSegment segment)
@@ -267,17 +281,7 @@ public static class SubtitleWriter
         List<string> tokens = [];
         foreach (string token in rawTokens)
         {
-            if (token.Length <= MaxLineLength)
-            {
-                tokens.Add(token);
-            }
-            else
-            {
-                for (int i = 0; i < token.Length; i += MaxLineLength)
-                {
-                    tokens.Add(token.Substring(i, Math.Min(MaxLineLength, token.Length - i)));
-                }
-            }
+            tokens.AddRange(Chunks(token).Select(c => token.Substring(c.Start, c.Length)));
         }
 
         int totalChars = tokens.Sum(t => t.Length);

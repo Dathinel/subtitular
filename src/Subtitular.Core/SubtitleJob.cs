@@ -48,11 +48,13 @@ public readonly record struct JobProgress(JobStage Stage, double StageFraction, 
         return overall >= 0.05 ? s + $" · quedan ~{FormatClock(elapsed * (1 / overall - 1))}" : s;
     }
 
-    /// <summary>m:ss, y h:mm:ss a partir de una hora.</summary>
+    /// <summary>m:ss, y h:mm:ss a partir de una hora (las horas no dan la vuelta al pasar de un día).</summary>
     public static string FormatClock(TimeSpan t)
     {
         t = t < TimeSpan.Zero ? TimeSpan.Zero : t;
-        return t.TotalHours >= 1 ? t.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture) : t.ToString(@"m\:ss", CultureInfo.InvariantCulture);
+        return t.TotalHours >= 1
+            ? string.Create(CultureInfo.InvariantCulture, $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}")
+            : t.ToString(@"m\:ss", CultureInfo.InvariantCulture);
     }
 
     public static JobProgress Of(IReadOnlyList<JobStage> stages, JobStage stage, double fraction)
