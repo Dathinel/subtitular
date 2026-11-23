@@ -85,6 +85,8 @@ public static class SubtitleJob
         return stages;
     }
 
+    internal const string VoiceExtension = ".voz.wav";
+
     public static string OutputPath(JobOptions options, string extension)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -159,7 +161,7 @@ public static class SubtitleJob
         {
             return (subtitles, null);
         }
-        string wav = OutputPath(options, ".voz.wav");
+        string wav = OutputPath(options, VoiceExtension);
         IReadOnlyList<JobStage> stages = StagesOf(options);
         if (spoken is not null && File.Exists(wav) && SpeechSynthesizer.SameSpeech(transcript, spoken))
         {
