@@ -106,6 +106,16 @@ public sealed class BatchTests
     }
 
     [Fact]
+    public void Prepare_preserves_a_later_voice_input()
+    {
+        JobOptions clip = Job("clip.mp4") with { Speak = true };
+        JobOptions voice = Job("clip.voz.wav");
+        var jobs = JobBatch.Prepare([clip, voice]);
+        Assert.Equal("clip-2", jobs[0].OutputName);
+        Assert.Equal(voice.InputFile, jobs[1].InputFile);
+    }
+
+    [Fact]
     public void Single_file_status_has_no_queue_prefix_and_starts_as_preparing()
     {
         BatchProgress preparing = new(0, 1, "clip.mp4", null);

@@ -45,13 +45,25 @@ public static class JobBatch
     {
         ArgumentNullException.ThrowIfNull(jobs);
         List<JobOptions> unique = [.. jobs.DistinctBy(j => Path.GetFullPath(j.InputFile), StringComparer.OrdinalIgnoreCase)];
-        HashSet<string> outputs = new(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> occupied = new(unique.Select(j => Path.GetFullPath(j.InputFile)), StringComparer.OrdinalIgnoreCase);
+        HashSet<string> stems = new(StringComparer.OrdinalIgnoreCase);
         for (int i = 0; i < unique.Count; i++)
         {
-            string name = Path.GetFileNameWithoutExtension(unique[i].InputFile);
-            for (int n = 2; !outputs.Add(SubtitleJob.OutputPath(unique[i], "")); n++)
+            JobOptions job = unique[i];
+            string name = job.OutputName ?? Path.GetFileNameWithoutExtension(job.InputFile);
+            for (int n = 2; ; n++)
             {
-                unique[i] = unique[i] with { OutputName = $"{name}-{n}" };
+                string stem = Path.GetFullPath(SubtitleJob.OutputPath(job, ""));
+                string subtitles = Path.GetFullPath(SubtitleJob.OutputPath(job, "." + job.Format));
+                string? voice = job.Speak ? Path.GetFullPath(SubtitleJob.OutputPath(job, SubtitleJob.VoiceExtension)) : null;
+                if (!occupied.Contains(subtitles) && (voice is null || !occupied.Contains(voice)) && stems.Add(stem))
+                {
+                    occupied.Add(subtitles);
+                    if (voice is not null) occupied.Add(voice);
+                    unique[i] = job;
+                    break;
+                }
+                job = job with { OutputName = $"{name}-{n}" };
             }
         }
         return unique;
